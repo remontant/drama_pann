@@ -1,0 +1,179 @@
+/* Drama Pann — Design Tokens */
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap');
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css');
+
+:root {
+  --paper:          #000000;
+  --paper-2:        #141414;
+  --ink:            #FFFFFF;
+  --ink-2:          #E5E5E5;
+
+  --n-900: #FFFFFF;
+  --n-800: #E5E5E5;
+  --n-700: #B3B3B3;
+  --n-600: #808080;
+  --n-500: #4D4D4D;
+  --n-400: #333333;
+  --n-300: #262626;
+  --n-200: #1A1A1A;
+  --n-100: #141414;
+  --n-050: #000000;
+
+  --plot-red:       #E50914;
+  --plot-red-hover: #F40612;
+  --plot-red-press: #B00710;
+  --plot-red-soft:  #2B0103;
+
+  --success: #2E8B57;
+  --warning: #C97B1E;
+  --danger:  #E50914;
+
+  --ink-05: rgba(255, 255, 255, 0.05);
+  --ink-10: rgba(255, 255, 255, 0.10);
+  --ink-20: rgba(255, 255, 255, 0.20);
+  --ink-40: rgba(255, 255, 255, 0.40);
+  --ink-60: rgba(255, 255, 255, 0.60);
+  --ink-80: rgba(255, 255, 255, 0.80);
+
+  --paper-10: rgba(0, 0, 0, 0.10);
+  --paper-20: rgba(0, 0, 0, 0.20);
+  --paper-40: rgba(0, 0, 0, 0.40);
+  --paper-60: rgba(0, 0, 0, 0.60);
+  --paper-80: rgba(0, 0, 0, 0.80);
+
+  --fg-1: var(--ink);
+  --fg-2: var(--n-600);
+  --fg-3: var(--n-500);
+  --fg-invert: var(--paper);
+  --bg-1: var(--paper);
+  --bg-2: var(--n-100);
+  --bg-canvas: var(--ink);
+
+  --font-sans:    'Geist', 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono:    'Geist Mono', 'SF Mono', 'JetBrains Mono', monospace;
+  --font-display: var(--font-sans);
+
+  --r-sm:   6px;
+  --r-md:   10px;
+  --r-lg:   16px;
+  --r-xl:   24px;
+  --r-full: 9999px;
+
+  --e1: 0 1px 2px rgba(15, 14, 13, 0.04);
+  --e2: 0 4px 12px rgba(15, 14, 13, 0.08);
+  --e3: 0 20px 48px rgba(15, 14, 13, 0.16);
+  --e4: 0 8px 32px rgba(0, 0, 0, 0.40);
+
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out:    cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-micro: 150ms;
+  --dur-ui:    250ms;
+  --dur-motion: 400ms;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+/* 모바일 탭 하이라이트 전역 제거 */
+* {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+button {
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg-1);
+  color: var(--fg-1);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  min-height: 100%;
+}
+
+@keyframes dpHint {
+  0%, 100% { opacity: 0; transform: translate(-50%, 0); }
+  40%, 70% { opacity: 1; transform: translate(-50%, -6px); }
+}
+
+@keyframes dpPulse {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 1; }
+}
+
+@keyframes plotLikePop {
+  0%   { transform: scale(0.85); }
+  50%  { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+
+@keyframes floatHeart {
+  0% {
+    opacity: 1;
+    transform: translateY(0) translateX(0) scale(0.55) rotate(var(--rot, -8deg));
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(-44px) translateX(var(--dx-mid, 0px)) scale(1.15) rotate(var(--rot, -8deg));
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-230px) translateX(var(--dx-end, 0px)) scale(0.8) rotate(var(--rot, -8deg));
+  }
+}
+
+@keyframes heartPop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.35); }
+  70%  { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+
+@keyframes btnGlow {
+  0% { box-shadow: 0 0 0 0 rgba(229, 9, 20, 0.6); }
+  70% { box-shadow: 0 0 0 12px rgba(229, 9, 20, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(229, 9, 20, 0); }
+}
+
+.youtube-iframe-full {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.side-text {
+  position: fixed;
+  top: 50%;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  color: var(--ink-40);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 0;
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+.side-text-left {
+  left: calc(50% - 345px - 60px);
+}
+
+.side-text-right {
+  left: calc(50% + 345px + 60px);
+}
+
+@media (max-width: 900px) {
+  .side-text {
+    display: none;
+  }
+}
