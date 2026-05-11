@@ -1,5 +1,8 @@
 import type { Metadata } from 'next';
+import Script from 'next/script';
 import './globals.css';
+
+const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? '';
 
 export const metadata: Metadata = {
   title: '드라마판 | 1분 만에 바뀌는 판도, 미친 몰입의 숏폼 드라마',
@@ -25,7 +28,25 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
-      <body style={{ margin: 0 }}>{children}</body>
+      <body style={{ margin: 0 }}>
+        {GA_ID && (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+              strategy="afterInteractive"
+            />
+            <Script id="ga4-init" strategy="afterInteractive">
+              {`
+                window.dataLayer = window.dataLayer || [];
+                window.gtag = function(){window.dataLayer.push(arguments);};
+                window.gtag('js', new Date());
+                window.gtag('config', '${GA_ID}', { send_page_view: false });
+              `}
+            </Script>
+          </>
+        )}
+        {children}
+      </body>
     </html>
   );
 }
