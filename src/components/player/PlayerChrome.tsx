@@ -42,6 +42,16 @@ export default function PlayerChrome({ series, ep, progress, duration }: Props) 
           pointerEvents: 'none',
         }}
       />
+      {/* 하단 인디케이터 전용 그라디언트 */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 'auto 0 0 0',
+          height: 90,
+          background: 'linear-gradient(to top, rgba(0,0,0,0.88) 40%, transparent)',
+          pointerEvents: 'none',
+        }}
+      />
 
       {/* Top bar */}
       <div
