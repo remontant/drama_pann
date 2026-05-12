@@ -20,6 +20,7 @@ export default function Feed({ seriesId, epIdx, onEpChange, onOpenBottomSheet, o
   const [activeDuration, setActiveDuration] = useState(90);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const touchAreaRef = useRef<HTMLDivElement>(null);
   const touchStartY = useRef<number | null>(null);
   const touchDelta = useRef<number>(0);
   const lastWheelTime = useRef<number>(0);
@@ -27,6 +28,15 @@ export default function Feed({ seriesId, epIdx, onEpChange, onOpenBottomSheet, o
 
   const series = getSeries(seriesId)!;
   const currentEntry = feed[epIdx];
+
+  // Safari iOS: non-passive touchmove로 페이지 스크롤 차단
+  useEffect(() => {
+    const el = touchAreaRef.current;
+    if (!el) return;
+    const handler = (e: TouchEvent) => { e.preventDefault(); };
+    el.addEventListener('touchmove', handler, { passive: false });
+    return () => el.removeEventListener('touchmove', handler);
+  }, []);
 
   useEffect(() => {
     activeProgressRef.current = 0;
@@ -112,11 +122,12 @@ export default function Feed({ seriesId, epIdx, onEpChange, onOpenBottomSheet, o
     >
       {/* 스크롤되는 영상 영역 */}
       <div
+        ref={touchAreaRef}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
         onWheel={onWheel}
-        style={{ position: 'absolute', inset: 0 }}
+        style={{ position: 'absolute', inset: 0, touchAction: 'none' }}
       >
         <div
           ref={containerRef}
