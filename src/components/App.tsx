@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Feed from './screens/Feed';
 import BottomSheet from './BottomSheet';
 import CompletionModal from './CompletionModal';
+import Main from './screens/Main';
 import { SERIES } from '@/lib/data';
 
 function pickRandomSeries(excludeId?: string): string {
@@ -10,6 +11,9 @@ function pickRandomSeries(excludeId?: string): string {
 }
 
 export default function App() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('page') === 'main') return <Main />;
+
   const [seriesId, setSeriesId] = useState<string | null>(null);
   const [epIdx, setEpIdx] = useState(0);
   const [showBottomSheet, setShowBottomSheet] = useState(false);
