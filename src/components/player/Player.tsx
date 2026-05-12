@@ -1,24 +1,19 @@
-'use client';
-
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Play, List, Mute, Volume, Heart } from '@/components/Icons';
 import PlayerChrome from './PlayerChrome';
 import { FeedEntry, getSeries } from '@/lib/data';
+import { trackView } from '@/lib/gtag';
 
-// ── YouTube IFrame API 전역 로더 ─────────────────────────────────────────────
 let _ytApiCallbacks: (() => void)[] = [];
 
 function ensureYouTubeAPI(): Promise<void> {
   return new Promise((resolve) => {
-    // 이미 로드된 경우 (정상 or HMR 후 재진입)
     if ((window as any).YT?.Player) {
       resolve();
       return;
     }
     _ytApiCallbacks.push(resolve);
-    // 스크립트 태그가 이미 있으면 로드 완료 후 콜백이 호출될 때까지 대기
     if (document.querySelector('script[src*="youtube.com/iframe_api"]')) return;
-    // 최초 1회 스크립트 삽입
     (window as any).onYouTubeIframeAPIReady = () => {
       _ytApiCallbacks.forEach((cb) => cb());
       _ytApiCallbacks = [];
@@ -89,8 +84,8 @@ export default function Player({
   const [progress, setProgress] = useState(0);
   const [realDuration, setRealDuration] = useState(entry.duration ?? 90);
   const [paused, setPaused] = useState(false);
+  const [isReady, setIsReady] = useState(false);
 
-  // ── 플로팅 하트 ───────────────────────────────────────────────────────────────
   interface FloatingHeart {
     id: number;
     size: number;
@@ -104,6 +99,7 @@ export default function Player({
   const HEART_COLORS = ['#ff2d55', '#ff6b8a', '#ff4f7b', '#ff1f5e', '#e5455a', '#ff5c8a'];
 
   const onHeartPress = useCallback(() => {
+    trackView('/click/heart', '하트 버튼');
     const heart: FloatingHeart = {
       id: Date.now() + Math.random(),
       size: 18 + Math.floor(Math.random() * 14),
@@ -120,7 +116,6 @@ export default function Player({
   const ytPlayer = useRef<any>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  // 렌더마다 동기적으로 업데이트 — useEffect로 하면 onReady 콜백에서 stale 값 참조 위험
   const activeRef = useRef(active);
   const isMutedRef = useRef(isMuted);
   const onEndedRef = useRef(onEnded);
@@ -131,61 +126,54 @@ export default function Player({
   const videoUrl = entry.videoUrl || 'https://www.youtube.com/watch?v=aqz-KE-bpKQ';
   const videoId = extractYoutubeId(videoUrl);
 
-  // ── YT.Player 생성 ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (!videoId || !wrapperRef.current) return;
     let cancelled = false;
 
-    // 이전 플레이어 + iframe 정리
     if (ytPlayer.current) {
       try { ytPlayer.current.destroy(); } catch {}
       ytPlayer.current = null;
     }
 
-    // placeholder div 생성 — YT.Player가 이 div를 iframe으로 교체
     const placeholder = document.createElement('div');
     wrapperRef.current.appendChild(placeholder);
 
-    ensureYouTubeAPI()
-      .then(() => {
-        if (cancelled || !placeholder.isConnected) return;
-        try {
-          ytPlayer.current = new (window as any).YT.Player(placeholder, {
-            videoId,
-            playerVars: {
-              autoplay: 1,
-              mute: 1,
-              controls: 0,
-              modestbranding: 1,
-              playsinline: 1,
-              rel: 0,
+    ensureYouTubeAPI().then(() => {
+      if (cancelled || !placeholder.isConnected) return;
+      try {
+        ytPlayer.current = new (window as any).YT.Player(placeholder, {
+          videoId,
+          playerVars: {
+            autoplay: 1,
+            mute: 1,
+            controls: 0,
+            modestbranding: 1,
+            playsinline: 1,
+            rel: 0,
+          },
+          events: {
+            onReady: (e: any) => {
+              if (cancelled) return;
+              try {
+                e.target.getIframe().className = 'youtube-iframe-full';
+              } catch {}
+              const dur: number = e.target.getDuration();
+              if (dur > 0) setRealDuration(dur);
+              if (!isMutedRef.current) e.target.unMute();
+              if (!activeRef.current) e.target.pauseVideo();
+              setIsReady(true);
             },
-            events: {
-              onReady: (e: any) => {
-                if (cancelled) return;
-                // iframe에 전체화면 스타일 적용
-                try {
-                  e.target.getIframe().className = 'youtube-iframe-full';
-                } catch {}
-                // 실제 재생 길이
-                const dur: number = e.target.getDuration();
-                if (dur > 0) setRealDuration(dur);
-                // 초기 상태 적용
-                if (!isMutedRef.current) e.target.unMute();
-                if (!activeRef.current) e.target.pauseVideo();
-              },
-              onStateChange: (e: any) => {
-                // 0 = 영상 종료
-                if (e.data === 0 && activeRef.current) {
-                  setTimeout(() => onEndedRef.current?.(), 0);
-                }
-              },
+            onStateChange: (e: any) => {
+              if (e.data === 0 && activeRef.current) {
+                setTimeout(() => onEndedRef.current?.(), 0);
+              }
             },
-          });
-        } catch (err) {
-          console.error('[Player] YT.Player 생성 실패:', err);
-        }
-      });
+          },
+        });
+      } catch (err) {
+        console.error('[Player] YT.Player 생성 실패:', err);
+      }
+    });
 
     return () => {
       cancelled = true;
@@ -193,13 +181,11 @@ export default function Player({
         try { ytPlayer.current.destroy(); } catch {}
         ytPlayer.current = null;
       }
-      // placeholder가 아직 교체 전이면 직접 제거
       if (placeholder.isConnected) placeholder.remove();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [videoId]);
 
-  // ── 재생 / 일시정지 ──────────────────────────────────────────────────────────
   useEffect(() => {
     const p = ytPlayer.current;
     if (!p?.playVideo) return;
@@ -208,7 +194,6 @@ export default function Player({
     } catch {}
   }, [active, paused]);
 
-  // ── 음소거 토글 ──────────────────────────────────────────────────────────────
   useEffect(() => {
     const p = ytPlayer.current;
     if (!p?.mute) return;
@@ -217,16 +202,15 @@ export default function Player({
     } catch {}
   }, [isMuted]);
 
-  // ── 비활성 시 처음으로 되감기 ────────────────────────────────────────────────
   useEffect(() => {
     if (!active) {
       setProgress(0);
       setPaused(false);
+      setIsReady(false);
       try { ytPlayer.current?.seekTo(0, true); } catch {}
     }
   }, [active]);
 
-  // ── 실시간 시간 폴링 (500ms) ─────────────────────────────────────────────────
   useEffect(() => {
     if (!active || paused) return;
     const interval = setInterval(() => {
@@ -259,13 +243,35 @@ export default function Player({
         cursor: 'pointer',
       }}
     >
-      {/* YT.Player가 내부에 iframe을 생성할 컨테이너 */}
       <div ref={wrapperRef} style={{ position: 'absolute', inset: 0, zIndex: 0 }} />
-
-      {/* 클릭 인터셉터 */}
       <div style={{ position: 'absolute', inset: 0, zIndex: 1 }} />
 
-      {/* 일시정지 인디케이터 */}
+      {/* 썸네일 오버레이 — 플레이어 준비 전까지 검은 화면 대신 표시 */}
+      {videoId && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 2,
+            background: '#000',
+            pointerEvents: 'none',
+            opacity: isReady ? 0 : 1,
+            transition: 'opacity 400ms ease',
+          }}
+        >
+          <img
+            src={`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`}
+            alt=""
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              opacity: 0.85,
+            }}
+          />
+        </div>
+      )}
+
       {paused && (
         <div
           style={{
@@ -287,8 +293,7 @@ export default function Player({
         </div>
       )}
 
-      {/* 플레이어 크롬 */}
-      <div style={{ position: 'absolute', inset: 0, zIndex: 2 }}>
+      <div style={{ position: 'absolute', inset: 0, zIndex: 3 }}>
         <PlayerChrome series={series} ep={entry.ep!} progress={progress} duration={realDuration} />
       </div>
 
@@ -323,10 +328,10 @@ export default function Player({
           display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center',
         }}
       >
-        <RailButton onClick={onToggleMute}>
+        <RailButton onClick={() => { trackView(isMuted ? '/click/mute/off' : '/click/mute/on', '음소거 토글'); onToggleMute(); }}>
           {isMuted ? <Mute size={22} strokeWidth={1.75} /> : <Volume size={22} strokeWidth={1.75} />}
         </RailButton>
-        <RailButton onClick={onOpenBottomSheet}>
+        <RailButton onClick={() => { trackView('/click/bottomsheet/open', '회차목록 열기'); onOpenBottomSheet(); }}>
           <List size={22} strokeWidth={1.75} />
         </RailButton>
         <div style={{ height: 10 }} />

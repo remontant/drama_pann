@@ -1,5 +1,3 @@
-'use client';
-
 import Image from 'next/image';
 import { SERIES } from '@/lib/data';
 import { Play, Search } from '@/components/Icons';
@@ -173,7 +171,7 @@ export default function List({ onOpenSeries }: Props) {
                 }}
               >
                 <Play size={14} strokeWidth={0} fill="var(--paper)" />
-                <span>EP1부터 보기</span>
+                <span>EP1부??보기</span>
                 <span
                   style={{
                     marginLeft: 4,
@@ -350,7 +348,7 @@ export default function List({ onOpenSeries }: Props) {
                     }}
                   />
                   <span>
-                    S{s.season} · {isComingSoon ? '공개 예정' : `${s.episodes.length}/${s.totalEp} EP`}
+                    S{s.season} · {isComingSoon ? '공개 ?�정' : `${s.episodes.length}/${s.totalEp} EP`}
                   </span>
                 </div>
               </div>
@@ -388,7 +386,7 @@ export default function List({ onOpenSeries }: Props) {
           textAlign: 'center',
         }}
       >
-        판보다 더 판 같은 드라마 · DRAMA PANN
+        ?�보??????같�? ?�라�?· DRAMA PANN
       </div>
     </div>
   );

@@ -1,5 +1,3 @@
-'use client';
-
 import { useState, useCallback } from 'react';
 import { Heart } from './Icons';
 
@@ -45,7 +43,7 @@ export default function LikeButton({ id, size = 48 }: Props) {
     <button
       key={animKey}
       onClick={toggle}
-      aria-label={liked ? '좋아요 취소' : '좋아요'}
+      aria-label={liked ? '좋아??취소' : '좋아??}
       style={{
         width: size,
         height: size,

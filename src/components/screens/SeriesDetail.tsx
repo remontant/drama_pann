@@ -1,5 +1,3 @@
-'use client';
-
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { ChevronLeft } from '@/components/Icons';
@@ -55,7 +53,7 @@ export default function SeriesDetail({ seriesId, onBack, onWatch }: Props) {
         {/* Back button */}
         <button
           onClick={onBack}
-          aria-label="뒤로"
+          aria-label="?�로"
           style={{
             position: 'absolute',
             top: 16,
@@ -129,7 +127,7 @@ export default function SeriesDetail({ seriesId, onBack, onWatch }: Props) {
         >
           {s.year && <span>{s.year}</span>}
           {s.year && <span style={{ opacity: 0.4 }}>·</span>}
-          <span>에피소드 {s.totalEp}개</span>
+          <span>?�피?�드 {s.totalEp}�?/span>
         </div>
 
         <div
@@ -213,7 +211,7 @@ export default function SeriesDetail({ seriesId, onBack, onWatch }: Props) {
               'var(--plot-red)')
           }
         >
-          다음 편 보기 · EP{String(s.episodes[0].ep).padStart(2, '0')}
+          ?�음 ??보기 · EP{String(s.episodes[0].ep).padStart(2, '0')}
         </button>
 
         {/* Secondary CTA */}
@@ -232,7 +230,7 @@ export default function SeriesDetail({ seriesId, onBack, onWatch }: Props) {
             marginBottom: 24,
           }}
         >
-          처음부터 보기
+          처음부??보기
         </button>
 
         {/* Details (Synopsis, Cast, Creator) */}
@@ -252,14 +250,14 @@ export default function SeriesDetail({ seriesId, onBack, onWatch }: Props) {
 
           {s.cast && s.cast.length > 0 && (
             <div style={{ fontSize: 13, color: 'var(--ink-40)' }}>
-              <span style={{ color: 'var(--ink-60)', marginRight: 6 }}>출연진:</span>
+              <span style={{ color: 'var(--ink-60)', marginRight: 6 }}>출연�?</span>
               {s.cast.join(', ')}
             </div>
           )}
 
           {s.creator && (
             <div style={{ fontSize: 13, color: 'var(--ink-40)' }}>
-              <span style={{ color: 'var(--ink-60)', marginRight: 6 }}>크리에이터:</span>
+              <span style={{ color: 'var(--ink-60)', marginRight: 6 }}>?�리?�이??</span>
               {s.creator}
             </div>
           )}
@@ -277,13 +275,13 @@ export default function SeriesDetail({ seriesId, onBack, onWatch }: Props) {
               marginBottom: 12,
             }}
           >
-            에피소드
+            ?�피?�드
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             {Array.from({ length: s.totalEp }, (_, i) => {
               const epNum = s.totalEp - i;
               const real = s.episodes.find((e) => e.ep === epNum);
-              const title = real?.title ?? '공개 예정';
+              const title = real?.title ?? '공개 ?�정';
               const locked = !real;
               return (
                 <div
@@ -380,7 +378,7 @@ export default function SeriesDetail({ seriesId, onBack, onWatch }: Props) {
           }}
           onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.background = 'var(--paper-40)')}
         >
-          <span style={{ fontSize: 11, color: 'var(--ink-60)', fontWeight: 500 }}>다음 화 보기</span>
+          <span style={{ fontSize: 11, color: 'var(--ink-60)', fontWeight: 500 }}>?�음 ??보기</span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: '#F5C518', fontSize: 14 }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <circle cx="12" cy="12" r="10" fill="#F5C518"/>
@@ -423,7 +421,7 @@ export default function SeriesDetail({ seriesId, onBack, onWatch }: Props) {
           }}
           onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.filter = 'brightness(1.1)')}
         >
-          <span style={{ fontSize: 11, opacity: 0.9, fontWeight: 500 }}>전체 관람 (할인)</span>
+          <span style={{ fontSize: 11, opacity: 0.9, fontWeight: 500 }}>?�체 관??(?�인)</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ textDecoration: 'line-through', opacity: 0.6, fontSize: 10, fontWeight: 500 }}>
               15,000
@@ -473,7 +471,7 @@ export default function SeriesDetail({ seriesId, onBack, onWatch }: Props) {
           >
             <h3 style={{ margin: '0 0 12px', fontSize: 18, color: 'var(--ink)' }}>Coming Soon</h3>
             <p style={{ margin: '0 0 20px', fontSize: 14, color: 'var(--ink-60)', lineHeight: 1.5 }}>
-              해당 기능은 현재 준비 중입니다.<br/>조금만 기다려주세요!
+              ?�당 기능?� ?�재 준�?중입?�다.<br/>조금�?기다?�주?�요!
             </p>
             <button
               onClick={() => setShowModal(false)}
@@ -488,7 +486,7 @@ export default function SeriesDetail({ seriesId, onBack, onWatch }: Props) {
                 cursor: 'pointer',
               }}
             >
-              확인
+              ?�인
             </button>
           </div>
         </div>

@@ -1,5 +1,3 @@
-'use client';
-
 import { useState, useRef } from 'react';
 import { SERIES, getSeries } from '@/lib/data';
 import { trackView } from '@/lib/gtag';
@@ -184,8 +182,8 @@ export default function BottomSheet({
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(5, 1fr)',
-                gap: 10,
+                gridTemplateColumns: 'repeat(7, 1fr)',
+                gap: 8,
               }}
             >
               {allEpisodes.map((ep) => {
@@ -210,7 +208,7 @@ export default function BottomSheet({
                         : ep.available
                         ? '#fff'
                         : 'rgba(255,255,255,0.2)',
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: isCurrent ? 700 : 500,
                       fontFamily: 'var(--font-mono)',
                       cursor: ep.available ? 'pointer' : 'default',
@@ -233,8 +231,7 @@ export default function BottomSheet({
                 gap: 14,
               }}
             >
-              {otherSeries.map((s) => (
-                <button
+              {otherSeries.map((s) => (                <button
                   key={s.id}
                   onClick={() => { trackView(`/click/bottomsheet/series/${s.title}`, `시리즈 선택 ${s.title}`); onSelectSeries(s.id); }}
                   style={{
@@ -283,6 +280,48 @@ export default function BottomSheet({
                   </div>
                 </button>
               ))}
+
+              {/* 준비중 플레이스홀더 */}
+              <div style={{ textAlign: 'left' }}>
+                <div
+                  style={{
+                    aspectRatio: '3/4',
+                    borderRadius: 10,
+                    background: 'rgba(255,255,255,0.04)',
+                    border: '1px dashed rgba(255,255,255,0.12)',
+                    marginBottom: 6,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                  }}
+                >
+                  <div style={{ fontSize: 22 }}>🎬</div>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: 'rgba(255,255,255,0.3)',
+                      fontFamily: 'var(--font-sans)',
+                      letterSpacing: '0.04em',
+                    }}
+                  >
+                    준비중
+                  </div>
+                </div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: 'rgba(255,255,255,0.25)',
+                    fontFamily: 'var(--font-sans)',
+                    lineHeight: 1.3,
+                  }}
+                >
+                  Coming Soon
+                </div>
+              </div>
             </div>
           )}
         </div>

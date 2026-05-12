@@ -1,4 +1,4 @@
-export const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? '';
+export const GA_ID = (import.meta as any).env?.VITE_GA_MEASUREMENT_ID ?? '';
 
 /**
  * GA4 가상 페이지뷰 — 모달 노출 / 버튼 클릭 공통 트래킹

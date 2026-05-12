@@ -1,8 +1,7 @@
-'use client';
-
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { getFeedFor } from '@/lib/data';
 import Player from '@/components/player/Player';
+import { trackView } from '@/lib/gtag';
 
 interface Props {
   seriesId: string;
@@ -23,12 +22,10 @@ export default function Feed({ seriesId, epIdx, onEpChange, onOpenBottomSheet, o
   const lastWheelTime = useRef<number>(0);
   const activeProgressRef = useRef<number>(0);
 
-  // Reset progress tracking when episode or series changes
   useEffect(() => {
     activeProgressRef.current = 0;
   }, [epIdx, seriesId]);
 
-  // Sync container transform when epIdx changes from parent
   useEffect(() => {
     if (containerRef.current) {
       containerRef.current.style.transition = 'transform 400ms cubic-bezier(0.22, 1, 0.36, 1)';
@@ -44,7 +41,6 @@ export default function Feed({ seriesId, epIdx, onEpChange, onOpenBottomSheet, o
       if (activeProgressRef.current >= duration * 0.8) {
         onShowCompletion();
       }
-      // Below 80% — resist only, no action
       return;
     }
     onEpChange(epIdx + 1);
@@ -77,8 +73,10 @@ export default function Feed({ seriesId, epIdx, onEpChange, onOpenBottomSheet, o
     }
 
     if (delta < -50) {
+      trackView('/click/feed/swipe-next', '다음 화 스와이프');
       tryGoNext();
     } else if (delta > 50 && epIdx > 0) {
+      trackView('/click/feed/swipe-prev', '이전 화 스와이프');
       onEpChange(epIdx - 1);
     }
 
@@ -152,7 +150,6 @@ export default function Feed({ seriesId, epIdx, onEpChange, onOpenBottomSheet, o
           );
         })}
       </div>
-
     </div>
   );
 }

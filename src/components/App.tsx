@@ -1,5 +1,3 @@
-'use client';
-
 import { useState, useEffect } from 'react';
 import Feed from './screens/Feed';
 import BottomSheet from './BottomSheet';
@@ -19,7 +17,6 @@ export default function App() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // ?series=xxx 쿼리로 특정 시리즈 직접 진입 지원
     const params = new URLSearchParams(window.location.search);
     const qSeries = params.get('series');
     const found = qSeries ? SERIES.find((s) => s.id === qSeries) : null;
@@ -49,7 +46,7 @@ export default function App() {
   return (
     <>
       <div className="side-text side-text-left">
-        DRAMA PANN <span style={{ opacity: 0.4 }}>·</span> 지루함은 순삭, 재미는 한 판
+        DRAMA PANN <span style={{ opacity: 0.4 }}>·</span> 멈출 수 없는 엔딩, 판은 이미 시작됐다
       </div>
       <div className="side-text side-text-right">
         2026 <span style={{ opacity: 0.4 }}>·</span> VERTICAL CINEMA

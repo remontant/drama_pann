@@ -1,7 +1,7 @@
-'use client';
-
+import { useEffect } from 'react';
 import { X } from '@/components/Icons';
 import { getSeries } from '@/lib/data';
+import { trackView } from '@/lib/gtag';
 
 interface Props {
   seriesId: string;
@@ -11,6 +11,8 @@ interface Props {
 
 export default function CompletionModal({ seriesId, onOtherContent, onClose }: Props) {
   const series = getSeries(seriesId)!;
+
+  useEffect(() => { trackView('/modal/completion', '완료 모달'); }, []);
 
   return (
     <div
@@ -39,7 +41,6 @@ export default function CompletionModal({ seriesId, onOtherContent, onClose }: P
           textAlign: 'center',
         }}
       >
-        {/* X button */}
         <button
           onClick={onClose}
           aria-label="닫기"
@@ -98,7 +99,7 @@ export default function CompletionModal({ seriesId, onOtherContent, onClose }: P
           조금만 기다려주세요!
         </div>
         <button
-          onClick={onOtherContent}
+          onClick={() => { trackView('/click/completion/other-content', '다른 콘텐츠 보기'); onOtherContent(); }}
           style={{
             width: '100%',
             padding: '13px 0',

@@ -1,8 +1,7 @@
-'use client';
-
 import { X } from '@/components/Icons';
 import ProgressBar from '@/components/ProgressBar';
 import { Series, fmtTime } from '@/lib/data';
+import { trackView } from '@/lib/gtag';
 
 interface Props {
   series: Series;
@@ -14,7 +13,6 @@ interface Props {
 export default function PlayerChrome({ series, ep, progress, duration }: Props) {
   return (
     <>
-      {/* Top solid bg — hides YouTube title/UI behind header */}
       <div
         style={{
           position: 'absolute',
@@ -24,7 +22,6 @@ export default function PlayerChrome({ series, ep, progress, duration }: Props) 
           pointerEvents: 'none',
         }}
       />
-      {/* Top gradient fade */}
       <div
         style={{
           position: 'absolute',
@@ -36,7 +33,6 @@ export default function PlayerChrome({ series, ep, progress, duration }: Props) 
           pointerEvents: 'none',
         }}
       />
-      {/* Bottom gradient */}
       <div
         style={{
           position: 'absolute',
@@ -61,7 +57,6 @@ export default function PlayerChrome({ series, ep, progress, duration }: Props) 
           zIndex: 2,
         }}
       >
-        {/* Logo + series title + ep count */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
           <span
             style={{
@@ -102,11 +97,11 @@ export default function PlayerChrome({ series, ep, progress, duration }: Props) 
           </span>
         </div>
 
-        {/* X button */}
         <button
           data-noprop="true"
           onClick={(e) => {
             e.stopPropagation();
+            trackView('/click/player/close', '플레이어 닫기');
             if (window.history.length <= 1) {
               window.close();
             } else {
