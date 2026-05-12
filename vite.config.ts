@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 
 export default defineConfig({
-  base: '/dramapann/',
+  base: process.env.VITE_BASE_PATH ?? '/dramapann/',
   plugins: [react()],
   resolve: {
     alias: {
