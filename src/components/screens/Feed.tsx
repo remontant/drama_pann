@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
-import { getFeedFor } from '@/lib/data';
+import { getFeedFor, getSeries } from '@/lib/data';
 import Player from '@/components/player/Player';
+import PlayerChrome from '@/components/player/PlayerChrome';
 import { trackView } from '@/lib/gtag';
 
 interface Props {
@@ -15,6 +16,8 @@ export default function Feed({ seriesId, epIdx, onEpChange, onOpenBottomSheet, o
   const allFeed = useMemo(() => getFeedFor(seriesId), [seriesId]);
   const feed = useMemo(() => allFeed.filter((e) => !e.comingSoon), [allFeed]);
   const [isMuted, setIsMuted] = useState(true);
+  const [activeProgress, setActiveProgress] = useState(0);
+  const [activeDuration, setActiveDuration] = useState(90);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const touchStartY = useRef<number | null>(null);
@@ -22,8 +25,13 @@ export default function Feed({ seriesId, epIdx, onEpChange, onOpenBottomSheet, o
   const lastWheelTime = useRef<number>(0);
   const activeProgressRef = useRef<number>(0);
 
+  const series = getSeries(seriesId)!;
+  const currentEntry = feed[epIdx];
+
   useEffect(() => {
     activeProgressRef.current = 0;
+    setActiveProgress(0);
+    setActiveDuration(currentEntry?.duration ?? 90);
   }, [epIdx, seriesId]);
 
   useEffect(() => {
@@ -100,55 +108,78 @@ export default function Feed({ seriesId, epIdx, onEpChange, onOpenBottomSheet, o
 
   return (
     <div
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
-      onWheel={onWheel}
-      style={{
-        position: 'absolute',
-        inset: 0,
-        overflow: 'hidden',
-        background: 'var(--paper)',
-      }}
+      style={{ position: 'absolute', inset: 0, overflow: 'hidden', background: 'var(--paper)' }}
     >
+      {/* 스크롤되는 영상 영역 */}
       <div
-        ref={containerRef}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        onWheel={onWheel}
+        style={{ position: 'absolute', inset: 0 }}
+      >
+        <div
+          ref={containerRef}
+          style={{
+            height: '100%',
+            width: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            transform: `translateY(-${epIdx * 100}%)`,
+            transition: 'transform 400ms cubic-bezier(0.22, 1, 0.36, 1)',
+          }}
+        >
+          {feed.map((entry, i) => {
+            const isNear = Math.abs(i - epIdx) <= 1;
+            return (
+              <div
+                key={entry.id}
+                style={{ flex: '0 0 100%', width: '100%', height: '100%', position: 'relative' }}
+              >
+                {isNear && (
+                  <Player
+                    entry={entry}
+                    active={i === epIdx}
+                    isMuted={isMuted}
+                    onToggleMute={() => setIsMuted((p) => !p)}
+                    onOpenBottomSheet={onOpenBottomSheet}
+                    onProgressChange={(p) => {
+                      activeProgressRef.current = p;
+                      if (i === epIdx) setActiveProgress(p);
+                    }}
+                    onDurationChange={(d) => {
+                      if (i === epIdx) setActiveDuration(d);
+                    }}
+                    onEnded={() => {
+                      if (i === feed.length - 1) {
+                        onShowCompletion();
+                      } else {
+                        onEpChange(i + 1);
+                      }
+                    }}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 고정 오버레이 — 헤더 + 인디케이터 */}
+      <div
         style={{
-          height: '100%',
-          width: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          transform: `translateY(-${epIdx * 100}%)`,
-          transition: 'transform 400ms cubic-bezier(0.22, 1, 0.36, 1)',
+          position: 'absolute',
+          inset: 0,
+          zIndex: 10,
+          pointerEvents: 'none',
         }}
       >
-        {feed.map((entry, i) => {
-          const isNear = Math.abs(i - epIdx) <= 1;
-          return (
-            <div
-              key={entry.id}
-              style={{ flex: '0 0 100%', width: '100%', height: '100%', position: 'relative' }}
-            >
-              {isNear && (
-                <Player
-                  entry={entry}
-                  active={i === epIdx}
-                  isMuted={isMuted}
-                  onToggleMute={() => setIsMuted((p) => !p)}
-                  onOpenBottomSheet={onOpenBottomSheet}
-                  onProgressChange={(p) => { activeProgressRef.current = p; }}
-                  onEnded={() => {
-                    if (i === feed.length - 1) {
-                      onShowCompletion();
-                    } else {
-                      onEpChange(i + 1);
-                    }
-                  }}
-                />
-              )}
-            </div>
-          );
-        })}
+        <PlayerChrome
+          series={series}
+          ep={currentEntry?.ep ?? 1}
+          progress={activeProgress}
+          duration={activeDuration}
+        />
       </div>
     </div>
   );

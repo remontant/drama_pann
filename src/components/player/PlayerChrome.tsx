@@ -131,6 +131,7 @@ export default function PlayerChrome({ series, ep, progress, duration }: Props) 
             backdropFilter: 'blur(10px)',
             WebkitBackdropFilter: 'blur(10px)',
             color: 'var(--ink)',
+            pointerEvents: 'auto',
             cursor: 'pointer',
             padding: 0,
             flexShrink: 0,

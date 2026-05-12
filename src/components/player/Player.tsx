@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Play, List, Mute, Volume, Heart } from '@/components/Icons';
-import PlayerChrome from './PlayerChrome';
 import { FeedEntry, getSeries } from '@/lib/data';
 import { trackView } from '@/lib/gtag';
 
@@ -41,6 +40,7 @@ interface Props {
   onOpenBottomSheet: () => void;
   onEnded?: () => void;
   onProgressChange?: (progress: number) => void;
+  onDurationChange?: (duration: number) => void;
 }
 
 function RailButton({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) {
@@ -79,6 +79,7 @@ export default function Player({
   onOpenBottomSheet,
   onEnded,
   onProgressChange,
+  onDurationChange,
 }: Props) {
   const series = getSeries(entry.seriesId)!;
   const [progress, setProgress] = useState(0);
@@ -158,7 +159,7 @@ export default function Player({
                 e.target.getIframe().className = 'youtube-iframe-full';
               } catch {}
               const dur: number = e.target.getDuration();
-              if (dur > 0) setRealDuration(dur);
+              if (dur > 0) { setRealDuration(dur); onDurationChange?.(dur); }
               if (!isMutedRef.current) e.target.unMute();
               if (!activeRef.current) e.target.pauseVideo();
               setIsReady(true);
@@ -220,7 +221,7 @@ export default function Player({
         const ct: number = p.getCurrentTime();
         const dur: number = p.getDuration();
         if (ct >= 0) { setProgress(ct); onProgressChange?.(ct); }
-        if (dur > 0) setRealDuration(dur);
+        if (dur > 0) { setRealDuration(dur); onDurationChange?.(dur); }
       } catch {}
     }, 500);
     return () => clearInterval(interval);
@@ -292,10 +293,6 @@ export default function Player({
           </div>
         </div>
       )}
-
-      <div style={{ position: 'absolute', inset: 0, zIndex: 3 }}>
-        <PlayerChrome series={series} ep={entry.ep!} progress={progress} duration={realDuration} />
-      </div>
 
       {/* 플로팅 하트 오버레이 */}
       <div style={{ position: 'absolute', inset: 0, zIndex: 5, pointerEvents: 'none' }}>
