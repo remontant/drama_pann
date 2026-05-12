@@ -29,7 +29,38 @@ export default function Main() {
           </span>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {/* 메인 CTA */}
+        <a
+          href={BASE}
+          style={{
+            display: 'block',
+            width: '100%',
+            padding: '16px',
+            borderRadius: 14,
+            background: 'var(--plot-red)',
+            color: '#fff',
+            fontSize: 16,
+            fontWeight: 700,
+            textAlign: 'center',
+            textDecoration: 'none',
+            marginBottom: 40,
+          }}
+        >
+          드라마판 바로가기 →
+        </a>
+
+        {/* 시리즈별 바로가기 */}
+        <div
+          style={{
+            fontSize: 11,
+            color: 'rgba(255,255,255,0.3)',
+            marginBottom: 12,
+            letterSpacing: '0.06em',
+          }}
+        >
+          시리즈 직접 선택
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {SERIES.map((s) => (
             <a
               key={s.id}
@@ -38,10 +69,10 @@ export default function Main() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: 14,
-                padding: '14px 16px',
-                borderRadius: 12,
-                background: 'rgba(255,255,255,0.06)',
-                border: '1px solid rgba(255,255,255,0.1)',
+                padding: '12px 14px',
+                borderRadius: 10,
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.08)',
                 textDecoration: 'none',
                 color: '#fff',
               }}
@@ -50,32 +81,21 @@ export default function Main() {
                 src={s.poster}
                 alt={s.title}
                 style={{
-                  width: 44,
-                  height: 60,
-                  borderRadius: 6,
+                  width: 36,
+                  height: 48,
+                  borderRadius: 5,
                   objectFit: 'cover',
                   flexShrink: 0,
                 }}
               />
               <div>
-                <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 4 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 3 }}>
                   {s.title}
                 </div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: 'rgba(255,255,255,0.45)',
-                  }}
-                >
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
                   {s.genre} · 총 {s.totalEp}화
                   {s.isComingSoon && (
-                    <span
-                      style={{
-                        marginLeft: 8,
-                        color: 'var(--plot-red)',
-                        fontWeight: 600,
-                      }}
-                    >
+                    <span style={{ marginLeft: 8, color: 'var(--plot-red)', fontWeight: 600 }}>
                       준비중
                     </span>
                   )}
