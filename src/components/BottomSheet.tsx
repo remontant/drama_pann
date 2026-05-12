@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { SERIES, getSeries } from '@/lib/data';
+import { trackView } from '@/lib/gtag';
 
 interface Props {
   seriesId: string;
@@ -38,8 +39,10 @@ export default function BottomSheet({
   const handleEpClick = (ep: { available: boolean; idx: number }) => {
     if (!ep.available) {
       setShowUnavailablePopup(true);
+      trackView('/click/bottomsheet/episode/unavailable', '미공개 회차 클릭');
       return;
     }
+    trackView('/click/bottomsheet/episode/available', '공개 회차 클릭');
     onSelectEpisode(ep.idx);
   };
 
@@ -233,7 +236,7 @@ export default function BottomSheet({
               {otherSeries.map((s) => (
                 <button
                   key={s.id}
-                  onClick={() => onSelectSeries(s.id)}
+                  onClick={() => { trackView(`/click/bottomsheet/series/${s.title}`, `시리즈 선택 ${s.title}`); onSelectSeries(s.id); }}
                   style={{
                     background: 'transparent',
                     border: 'none',
