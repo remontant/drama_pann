@@ -19,20 +19,8 @@ export default function PlayerChrome({ series, ep, progress, duration }: Props) 
         style={{
           position: 'absolute',
           inset: '0 0 auto 0',
-          height: 80,
-          background: 'rgba(0,0,0,0.92)',
-          pointerEvents: 'none',
-        }}
-      />
-      {/* 상단 fade-out */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 80,
-          left: 0,
-          right: 0,
-          height: 60,
-          background: 'linear-gradient(to bottom, rgba(0,0,0,0.6), transparent)',
+          height: 54,
+          background: 'rgba(0,0,0,0.80)',
           pointerEvents: 'none',
         }}
       />
@@ -65,7 +53,7 @@ export default function PlayerChrome({ series, ep, progress, duration }: Props) 
           top: 0,
           left: 0,
           right: 0,
-          padding: '24px 20px 0',
+          padding: '16px 20px 0',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
