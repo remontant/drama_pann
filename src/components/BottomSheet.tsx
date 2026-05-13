@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { SERIES, getSeries } from '@/lib/data';
 import { trackView } from '@/lib/gtag';
 
@@ -19,7 +19,21 @@ export default function BottomSheet({
 }: Props) {
   const series = getSeries(seriesId)!;
   const [activeTab, setActiveTab] = useState<'episodes' | 'other'>('episodes');
-  const [showUnavailablePopup, setShowUnavailablePopup] = useState(false);
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastExiting, setToastExiting] = useState(false);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = () => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToastExiting(false);
+    setToastVisible(true);
+    toastTimerRef.current = setTimeout(() => {
+      setToastExiting(true);
+      setTimeout(() => setToastVisible(false), 300);
+    }, 3000);
+  };
+
+  useEffect(() => () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); }, []);
 
   const sheetRef = useRef<HTMLDivElement>(null);
   const dragStartY = useRef<number | null>(null);
@@ -36,7 +50,7 @@ export default function BottomSheet({
 
   const handleEpClick = (ep: { available: boolean; idx: number }) => {
     if (!ep.available) {
-      setShowUnavailablePopup(true);
+      showToast();
       trackView('/click/bottomsheet/episode/unavailable', '미공개 회차 클릭');
       return;
     }
@@ -110,7 +124,7 @@ export default function BottomSheet({
         onTouchEnd={onDragEnd}
       >
         {/* Drag handle */}
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 6px' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px' }}>
           <div
             style={{
               width: 36,
@@ -121,36 +135,12 @@ export default function BottomSheet({
           />
         </div>
 
-        {/* Series header */}
-        <div style={{ padding: '8px 20px 16px' }}>
-          <div
-            style={{
-              fontSize: 15,
-              fontWeight: 700,
-              color: '#fff',
-              fontFamily: 'var(--font-sans)',
-              marginBottom: 3,
-            }}
-          >
-            {series.title}
-          </div>
-          <div
-            style={{
-              fontSize: 12,
-              color: 'rgba(255,255,255,0.45)',
-              fontFamily: 'var(--font-mono)',
-            }}
-          >
-            총 {series.totalEp}화
-          </div>
-        </div>
-
         {/* Tabs */}
         <div
           style={{
             display: 'flex',
             borderBottom: '1px solid rgba(255,255,255,0.08)',
-            padding: '0 20px',
+            //padding: '0 20px',
           }}
         >
           {(['episodes', 'other'] as const).map((tab) => (
@@ -159,19 +149,20 @@ export default function BottomSheet({
               onClick={() => setActiveTab(tab)}
               style={{
                 flex: 1,
-                padding: '10px 0',
+                padding: '14px 0',
                 background: 'transparent',
                 border: 'none',
-                borderBottom: activeTab === tab ? '2px solid var(--plot-red)' : '2px solid transparent',
+                borderBottom: activeTab === tab ? '1px solid var(--plot-red)' : '1px solid transparent',
                 marginBottom: -1,
                 color: activeTab === tab ? '#fff' : 'rgba(255,255,255,0.4)',
-                fontSize: 13,
+                fontSize: 14,
                 fontWeight: activeTab === tab ? 600 : 400,
                 fontFamily: 'var(--font-sans)',
+                letterSpacing: '-0.3px',
                 cursor: 'pointer',
               }}
             >
-              {tab === 'episodes' ? '회차정보' : '다른 콘텐츠'}
+              {tab === 'episodes' ? '회차 정보' : '다른 콘텐츠'}
             </button>
           ))}
         </div>
@@ -228,7 +219,7 @@ export default function BottomSheet({
               style={{
                 display: 'grid',
                 gridTemplateColumns: 'repeat(2, 1fr)',
-                gap: 14,
+                gap: 10,
               }}
             >
               {otherSeries.map((s) => {
@@ -250,10 +241,9 @@ export default function BottomSheet({
                       style={{
                         position: 'relative',
                         aspectRatio: '3/4',
-                        borderRadius: 10,
+                        borderRadius: 12,
                         overflow: 'hidden',
                         background: '#1a1a1a',
-                        marginBottom: 6,
                       }}
                     >
                       <img
@@ -263,76 +253,21 @@ export default function BottomSheet({
                           width: '100%',
                           height: '100%',
                           objectFit: 'cover',
-                          filter: isCurrent ? 'brightness(0.45)' : 'none',
-                          transition: 'filter 200ms',
                         }}
                       />
 
-                      {/* 현재 시청 중 오버레이 */}
+                      {/* 현재 시청 중 오버레이 — 기획 미포함, 추후 사용
                       {isCurrent && (
-                        <div
-                          style={{
-                            position: 'absolute',
-                            inset: 0,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: 8,
-                          }}
-                        >
-                          {/* 재생 중 애니메이션 바 */}
+                        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'rgba(0,0,0,0.55)' }}>
                           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 20 }}>
                             {[0, 1, 2, 3].map((i) => (
-                              <div
-                                key={i}
-                                style={{
-                                  width: 3,
-                                  borderRadius: 2,
-                                  background: 'var(--plot-red)',
-                                  animation: `nowPlayingBar 0.9s ease-in-out ${i * 0.15}s infinite alternate`,
-                                }}
-                              />
+                              <div key={i} style={{ width: 3, borderRadius: 2, background: 'var(--plot-red)', animation: `nowPlayingBar 0.9s ease-in-out ${i * 0.15}s infinite alternate` }} />
                             ))}
                           </div>
-                          <div
-                            style={{
-                              fontSize: 10,
-                              fontWeight: 700,
-                              color: '#fff',
-                              fontFamily: 'var(--font-mono)',
-                              letterSpacing: '0.08em',
-                              background: 'rgba(229,9,20,0.85)',
-                              padding: '3px 8px',
-                              borderRadius: 4,
-                            }}
-                          >
-                            시청 중
-                          </div>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: '#fff', fontFamily: 'var(--font-sans)', background: 'rgba(229,9,20,0.85)', padding: '3px 8px', borderRadius: 4 }}>시청 중</div>
                         </div>
                       )}
-                    </div>
-
-                    <div
-                      style={{
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: isCurrent ? 'rgba(255,255,255,0.45)' : '#fff',
-                        fontFamily: 'var(--font-sans)',
-                        lineHeight: 1.3,
-                      }}
-                    >
-                      {s.title}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 11,
-                        color: 'rgba(255,255,255,0.4)',
-                        fontFamily: 'var(--font-mono)',
-                        marginTop: 2,
-                      }}
-                    >
-                      {s.genre}
+                      */}
                     </div>
                   </button>
                 );
@@ -342,74 +277,58 @@ export default function BottomSheet({
         </div>
       </div>
 
-      {/* Unavailable episode popup */}
-      {showUnavailablePopup && (
+      {/* 미공개 회차 토스트 */}
+      {toastVisible && (
         <div
           style={{
             position: 'absolute',
-            inset: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            bottom: 24,
+            left: 16,
+            right: 16,
             zIndex: 30,
-            padding: 24,
+            pointerEvents: 'none',
+            opacity: toastExiting ? 0 : 1,
+            transform: toastExiting ? 'translateY(8px)' : 'translateY(0)',
+            transition: 'opacity 300ms ease, transform 300ms ease',
           }}
-          onClick={(e) => e.stopPropagation()}
         >
           <div
             style={{
-              background: '#1c1c1c',
-              borderRadius: 16,
-              padding: '28px 24px 24px',
-              width: '100%',
-              maxWidth: 300,
+              background: 'rgba(38,38,38,0.97)',
+              borderRadius: 12,
+              padding: '14px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
               textAlign: 'center',
-              border: '1px solid rgba(255,255,255,0.08)',
+              gap: 10,
             }}
           >
-            <div
-              style={{
-                fontSize: 15,
-                fontWeight: 700,
-                color: '#fff',
-                fontFamily: 'var(--font-sans)',
-                marginBottom: 10,
-              }}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="22"
+              height="22"
+              viewBox="0 0 22 22"
+              fill="none"
+              style={{ flexShrink: 0 }}
             >
-              드라마 판 재미있게 보셨나요?
-            </div>
-            <div
+              <circle cx="11" cy="11.0002" r="8.70833" stroke="#BBBBBB" strokeWidth="0.916667" />
+              <circle cx="11" cy="15.5832" r="0.916667" fill="#BBBBBB" />
+              <rect x="10.0833" y="5.9585" width="1.83333" height="7.33333" rx="0.916667" fill="#BBBBBB" />
+            </svg>
+            <span
               style={{
-                fontSize: 13,
-                color: 'rgba(255,255,255,0.55)',
-                fontFamily: 'var(--font-sans)',
-                lineHeight: 1.65,
-                marginBottom: 22,
-              }}
-            >
-              이어지는 이야기는 현재 준비중입니다.
-              <br />
-              곧 이용하실 수 있도록 준비중이오니
-              <br />
-              조금만 기다려주세요!
-            </div>
-            <button
-              onClick={() => setShowUnavailablePopup(false)}
-              style={{
-                width: '100%',
-                padding: '12px 0',
-                borderRadius: 10,
-                background: 'rgba(255,255,255,0.1)',
-                border: '1px solid rgba(255,255,255,0.15)',
-                color: '#fff',
                 fontSize: 14,
                 fontWeight: 600,
+                color: '#E1E1E1',
                 fontFamily: 'var(--font-sans)',
-                cursor: 'pointer',
+                lineHeight: '20px',
+                letterSpacing: '-1px',
               }}
             >
-              확인
-            </button>
+              {/* {series.title}의 이어지는 이야기는 현재 준비 중입니다. */}
+              이어지는 이야기는 현재 준비 중입니다.
+            </span>
           </div>
         </div>
       )}
