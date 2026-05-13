@@ -94,43 +94,57 @@ export default function PlayerChrome({ series, ep, progress, duration }: Props) 
           zIndex: 2,
         }}
       >
-        {/* 시리즈명 + 에피소드 */}
+        {/* 시리즈명 + 에피소드 (1줄) */}
         <div
           style={{
             display: 'flex',
             alignItems: 'baseline',
             gap: 6,
             marginBottom: 10,
+            overflow: 'hidden',
           }}
         >
           <span
             style={{
               fontFamily: 'var(--font-sans)',
-              fontSize: 15,
-              fontWeight: 700,
+              fontSize: 17,
+              fontWeight: 600,
+              lineHeight: '24px',
+              letterSpacing: '-0.5px',
               color: '#fff',
-              lineHeight: 1.2,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              flexShrink: 1,
+              minWidth: 0,
             }}
           >
             {series.title}
           </span>
           <span
             style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 13,
-              fontWeight: 500,
+              fontFamily: 'var(--font-sans)',
+              fontSize: 15,
+              fontWeight: 600,
+              lineHeight: '20px',
+              letterSpacing: '-0.5px',
               color: '#fff',
               whiteSpace: 'nowrap',
+              flexShrink: 0,
             }}
           >
             {String(ep).padStart(2, '0')}화
           </span>
           <span
             style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 13,
-              color: 'rgba(255,255,255,0.5)',
+              fontFamily: 'var(--font-sans)',
+              fontSize: 15,
+              fontWeight: 400,
+              lineHeight: '20px',
+              letterSpacing: '-0.5px',
+              color: '#CCC',
               whiteSpace: 'nowrap',
+              flexShrink: 0,
             }}
           >
             /{series.totalEp}화

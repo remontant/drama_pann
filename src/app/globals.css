@@ -47,7 +47,7 @@
   --bg-2: var(--n-100);
   --bg-canvas: var(--ink);
 
-  --font-sans:    -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  --font-sans:    -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Apple SD Gothic Neo', 'Malgun Gothic', Arial, sans-serif;
   --font-mono:    ui-monospace, 'SF Mono', monospace;
   --font-display: var(--font-sans);
 
@@ -99,7 +99,10 @@ body {
   color: var(--fg-1);
   font-family: var(--font-sans);
   font-size: 16px;
-  line-height: 1.45;
+  line-height: 1.2em;
+  letter-spacing: -0.3px;
+  -webkit-text-size-adjust: none;
+  text-size-adjust: none;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
