@@ -295,33 +295,36 @@ export default function BottomSheet({
         >
           <div
             style={{
-              background: 'rgba(38,38,38,0.97)',
+              background: '#2a2a2a',
               borderRadius: 12,
               padding: '14px 16px',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              textAlign: 'center',
               gap: 10,
             }}
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="22"
-              height="22"
-              viewBox="0 0 22 22"
-              fill="none"
-              style={{ flexShrink: 0 }}
+            <div
+              style={{
+                width: 22,
+                height: 22,
+                borderRadius: 9999,
+                border: '1.5px solid rgba(255,255,255,0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                color: 'rgba(255,255,255,0.7)',
+                fontSize: 13,
+                fontWeight: 700,
+              }}
             >
-              <circle cx="11" cy="11.0002" r="8.70833" stroke="#BBBBBB" strokeWidth="0.916667" />
-              <circle cx="11" cy="15.5832" r="0.916667" fill="#BBBBBB" />
-              <rect x="10.0833" y="5.9585" width="1.83333" height="7.33333" rx="0.916667" fill="#BBBBBB" />
-            </svg>
+              !
+            </div>
             <span
               style={{
                 fontSize: 14,
                 fontWeight: 600,
-                color: '#E1E1E1',
+                color: '#fff',
                 fontFamily: 'var(--font-sans)',
                 lineHeight: '20px',
                 letterSpacing: '-1px',
