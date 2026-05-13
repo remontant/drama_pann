@@ -1,6 +1,4 @@
 /* Drama Pann — Design Tokens */
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap');
-@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css');
 
 :root {
   --paper:          #000000;
@@ -49,8 +47,8 @@
   --bg-2: var(--n-100);
   --bg-canvas: var(--ink);
 
-  --font-sans:    'Geist', 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono:    'Geist Mono', 'SF Mono', 'JetBrains Mono', monospace;
+  --font-sans:    -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  --font-mono:    ui-monospace, 'SF Mono', monospace;
   --font-display: var(--font-sans);
 
   --r-sm:   6px;
