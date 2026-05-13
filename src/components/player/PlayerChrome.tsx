@@ -14,24 +14,46 @@ interface Props {
 export default function PlayerChrome({ series, ep, progress, duration }: Props) {
   return (
     <>
-      {/* 상단 그라디언트 */}
+      {/* 상단 solid bg */}
       <div
         style={{
           position: 'absolute',
           inset: '0 0 auto 0',
-          height: 100,
-          background: 'linear-gradient(to bottom, rgba(0,0,0,0.75) 0%, transparent 100%)',
+          height: 80,
+          background: 'rgba(0,0,0,0.92)',
+          pointerEvents: 'none',
+        }}
+      />
+      {/* 상단 fade-out */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 80,
+          left: 0,
+          right: 0,
+          height: 60,
+          background: 'linear-gradient(to bottom, rgba(0,0,0,0.6), transparent)',
           pointerEvents: 'none',
         }}
       />
 
-      {/* 하단 그라디언트 */}
+      {/* 하단 넓은 그라디언트 */}
       <div
         style={{
           position: 'absolute',
           inset: 'auto 0 0 0',
           height: '38%',
-          background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.3) 55%, transparent 100%)',
+          background: 'linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0.2) 60%, transparent)',
+          pointerEvents: 'none',
+        }}
+      />
+      {/* 하단 인디케이터 전용 강조 */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 'auto 0 0 0',
+          height: 90,
+          background: 'linear-gradient(to top, rgba(0,0,0,0.88) 40%, transparent)',
           pointerEvents: 'none',
         }}
       />
