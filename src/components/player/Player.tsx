@@ -115,6 +115,7 @@ export default function Player({
   }, []);
 
   const ytPlayer = useRef<any>(null);
+  const ytReadyRef = useRef(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   const activeRef = useRef(active);
@@ -161,13 +162,28 @@ export default function Player({
               const dur: number = e.target.getDuration();
               if (dur > 0) { setRealDuration(dur); onDurationChange?.(dur); }
               if (!isMutedRef.current) e.target.unMute();
-              if (!activeRef.current) e.target.pauseVideo();
+              if (activeRef.current) {
+                e.target.playVideo();
+              } else {
+                e.target.pauseVideo();
+              }
+              ytReadyRef.current = true;
               setIsReady(true);
             },
             onStateChange: (e: any) => {
               if (e.data === 0 && activeRef.current) {
                 setTimeout(() => onEndedRef.current?.(), 0);
               }
+            },
+            onError: (e: any) => {
+              const msg: Record<number, string> = {
+                2: '잘못된 파라미터',
+                5: 'HTML5 플레이어 오류',
+                100: '영상 없음 또는 비공개',
+                101: '퍼가기 차단된 영상',
+                150: '퍼가기 차단된 영상',
+              };
+              console.warn('[Player] YouTube 오류:', e.data, msg[e.data] ?? '알 수 없음');
             },
           },
         });
@@ -209,6 +225,9 @@ export default function Player({
       setPaused(false);
       setIsReady(false);
       try { ytPlayer.current?.seekTo(0, true); } catch {}
+    } else if (ytReadyRef.current) {
+      // 이미 로드된 플레이어로 돌아왔을 때 thumbnail 복원
+      setIsReady(true);
     }
   }, [active]);
 
