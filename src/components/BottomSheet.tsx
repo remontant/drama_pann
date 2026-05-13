@@ -32,7 +32,7 @@ export default function BottomSheet({
     idx: i,
   }));
 
-  const otherSeries = SERIES.filter((s) => s.id !== seriesId).slice(0, 8);
+  const otherSeries = SERIES.filter((s) => s.id !== seriesId);
 
   const handleEpClick = (ep: { available: boolean; idx: number }) => {
     if (!ep.available) {
@@ -280,48 +280,6 @@ export default function BottomSheet({
                   </div>
                 </button>
               ))}
-
-              {/* 준비중 플레이스홀더 */}
-              <div style={{ textAlign: 'left' }}>
-                <div
-                  style={{
-                    aspectRatio: '3/4',
-                    borderRadius: 10,
-                    background: 'rgba(255,255,255,0.04)',
-                    border: '1px dashed rgba(255,255,255,0.12)',
-                    marginBottom: 6,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
-                  }}
-                >
-                  <div style={{ fontSize: 22 }}>🎬</div>
-                  <div
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: 'rgba(255,255,255,0.3)',
-                      fontFamily: 'var(--font-sans)',
-                      letterSpacing: '0.04em',
-                    }}
-                  >
-                    준비중
-                  </div>
-                </div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: 'rgba(255,255,255,0.25)',
-                    fontFamily: 'var(--font-sans)',
-                    lineHeight: 1.3,
-                  }}
-                >
-                  Coming Soon
-                </div>
-              </div>
             </div>
           )}
         </div>
