@@ -32,7 +32,7 @@ export default function BottomSheet({
     idx: i,
   }));
 
-  const otherSeries = SERIES.filter((s) => s.id !== seriesId);
+  const otherSeries = SERIES;
 
   const handleEpClick = (ep: { available: boolean; idx: number }) => {
     if (!ep.available) {
@@ -231,55 +231,112 @@ export default function BottomSheet({
                 gap: 14,
               }}
             >
-              {otherSeries.map((s) => (                <button
-                  key={s.id}
-                  onClick={() => { trackView(`/click/bottomsheet/series/${s.title}`, `시리즈 선택 ${s.title}`); onSelectSeries(s.id); }}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    padding: 0,
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                  }}
-                >
-                  <div
+              {otherSeries.map((s) => {
+                const isCurrent = s.id === seriesId;
+                return (
+                  <button
+                    key={s.id}
+                    onClick={isCurrent ? undefined : () => { trackView(`/click/bottomsheet/series/${s.title}`, `시리즈 선택 ${s.title}`); onSelectSeries(s.id); }}
                     style={{
-                      aspectRatio: '3/4',
-                      borderRadius: 10,
-                      overflow: 'hidden',
-                      background: '#1a1a1a',
-                      marginBottom: 6,
+                      background: 'transparent',
+                      border: 'none',
+                      padding: 0,
+                      cursor: isCurrent ? 'default' : 'pointer',
+                      textAlign: 'left',
                     }}
                   >
-                    <img
-                      src={s.poster}
-                      alt={s.title}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 12,
-                      fontWeight: 600,
-                      color: '#fff',
-                      fontFamily: 'var(--font-sans)',
-                      lineHeight: 1.3,
-                    }}
-                  >
-                    {s.title}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 11,
-                      color: 'rgba(255,255,255,0.4)',
-                      fontFamily: 'var(--font-mono)',
-                      marginTop: 2,
-                    }}
-                  >
-                    {s.genre}
-                  </div>
-                </button>
-              ))}
+                    {/* 포스터 */}
+                    <div
+                      style={{
+                        position: 'relative',
+                        aspectRatio: '3/4',
+                        borderRadius: 10,
+                        overflow: 'hidden',
+                        background: '#1a1a1a',
+                        marginBottom: 6,
+                      }}
+                    >
+                      <img
+                        src={s.poster}
+                        alt={s.title}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          filter: isCurrent ? 'brightness(0.45)' : 'none',
+                          transition: 'filter 200ms',
+                        }}
+                      />
+
+                      {/* 현재 시청 중 오버레이 */}
+                      {isCurrent && (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            inset: 0,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 8,
+                          }}
+                        >
+                          {/* 재생 중 애니메이션 바 */}
+                          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 20 }}>
+                            {[0, 1, 2, 3].map((i) => (
+                              <div
+                                key={i}
+                                style={{
+                                  width: 3,
+                                  borderRadius: 2,
+                                  background: 'var(--plot-red)',
+                                  animation: `nowPlayingBar 0.9s ease-in-out ${i * 0.15}s infinite alternate`,
+                                }}
+                              />
+                            ))}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 700,
+                              color: '#fff',
+                              fontFamily: 'var(--font-mono)',
+                              letterSpacing: '0.08em',
+                              background: 'rgba(229,9,20,0.85)',
+                              padding: '3px 8px',
+                              borderRadius: 4,
+                            }}
+                          >
+                            시청 중
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: isCurrent ? 'rgba(255,255,255,0.45)' : '#fff',
+                        fontFamily: 'var(--font-sans)',
+                        lineHeight: 1.3,
+                      }}
+                    >
+                      {s.title}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: 'rgba(255,255,255,0.4)',
+                        fontFamily: 'var(--font-mono)',
+                        marginTop: 2,
+                      }}
+                    >
+                      {s.genre}
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
