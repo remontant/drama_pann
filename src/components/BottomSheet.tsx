@@ -218,7 +218,7 @@ export default function BottomSheet({
                       transition: 'background 120ms',
                     }}
                   >
-                    {ep.ep}
+                    {String(ep.ep).padStart(2, '0')}
                   </button>
                 );
               })}
