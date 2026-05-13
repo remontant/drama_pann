@@ -27,6 +27,7 @@ export default function BottomSheet({
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     setToastExiting(false);
     setToastVisible(true);
+    trackView('/toast/unavailable-episode', '미공개 회차 안내 토스트');
     toastTimerRef.current = setTimeout(() => {
       setToastExiting(true);
       setTimeout(() => setToastVisible(false), 300);
