@@ -1,6 +1,7 @@
 import { X } from '@/components/Icons';
 import ProgressBar from '@/components/ProgressBar';
-import { Series, fmtTime } from '@/lib/data';
+import DramaBi from '@/components/DramaBi';
+import { Series } from '@/lib/data';
 import { trackView } from '@/lib/gtag';
 
 interface Props {
@@ -13,99 +14,43 @@ interface Props {
 export default function PlayerChrome({ series, ep, progress, duration }: Props) {
   return (
     <>
+      {/* 상단 그라디언트 */}
       <div
         style={{
           position: 'absolute',
           inset: '0 0 auto 0',
-          height: 80,
-          background: 'rgba(0,0,0,0.92)',
+          height: 100,
+          background: 'linear-gradient(to bottom, rgba(0,0,0,0.75) 0%, transparent 100%)',
           pointerEvents: 'none',
         }}
       />
-      <div
-        style={{
-          position: 'absolute',
-          top: 80,
-          left: 0,
-          right: 0,
-          height: 60,
-          background: 'linear-gradient(to bottom, rgba(0,0,0,0.6), transparent)',
-          pointerEvents: 'none',
-        }}
-      />
+
+      {/* 하단 그라디언트 */}
       <div
         style={{
           position: 'absolute',
           inset: 'auto 0 0 0',
           height: '38%',
-          background: 'linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0.2) 60%, transparent)',
-          pointerEvents: 'none',
-        }}
-      />
-      {/* 하단 인디케이터 전용 그라디언트 */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 'auto 0 0 0',
-          height: 90,
-          background: 'linear-gradient(to top, rgba(0,0,0,0.88) 40%, transparent)',
+          background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.3) 55%, transparent 100%)',
           pointerEvents: 'none',
         }}
       />
 
-      {/* Top bar */}
+      {/* 상단 바 — BI + X */}
       <div
         style={{
           position: 'absolute',
           top: 0,
           left: 0,
           right: 0,
-          padding: '22px 20px 20px',
+          padding: '24px 20px 0',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           zIndex: 2,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 0 }}>
-          <span
-            style={{
-              fontFamily: 'var(--font-sans)',
-              fontSize: 14,
-              fontWeight: 700,
-              letterSpacing: '0.02em',
-              color: 'var(--ink)',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            Drama<span style={{ color: 'var(--plot-red)' }}>Pann</span>
-          </span>
-          <span style={{ color: 'var(--ink-30)', fontSize: 12 }}>·</span>
-          <span
-            style={{
-              fontFamily: 'var(--font-sans)',
-              fontSize: 13,
-              fontWeight: 500,
-              color: 'var(--ink-80)',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {series.title}
-          </span>
-          <span
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 12,
-              color: 'var(--ink-50)',
-              whiteSpace: 'nowrap',
-              flexShrink: 0,
-            }}
-          >
-            {ep}/{series.totalEp}
-          </span>
-        </div>
+        <DramaBi height={22} />
 
         <button
           data-noprop="true"
@@ -120,29 +65,25 @@ export default function PlayerChrome({ series, ep, progress, duration }: Props) 
           }}
           aria-label="닫기"
           style={{
-            width: 36,
-            height: 36,
+            width: 32,
+            height: 32,
             borderRadius: 9999,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: 'var(--paper-40)',
-            border: '1px solid var(--ink-10)',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
+            background: 'transparent',
+            border: 'none',
             color: 'var(--ink)',
             pointerEvents: 'auto',
             cursor: 'pointer',
             padding: 0,
-            flexShrink: 0,
-            marginLeft: 12,
           }}
         >
-          <X size={18} strokeWidth={2} />
+          <X size={22} strokeWidth={2} />
         </button>
       </div>
 
-      {/* Bottom meta */}
+      {/* 하단 — 시리즈 정보 + 프로그레스 */}
       <div
         style={{
           position: 'absolute',
@@ -151,24 +92,52 @@ export default function PlayerChrome({ series, ep, progress, duration }: Props) 
           right: 0,
           padding: '0 18px 20px',
           zIndex: 2,
-          color: 'var(--ink)',
         }}
       >
-        <ProgressBar value={progress} total={duration} />
+        {/* 시리즈명 + 에피소드 */}
         <div
           style={{
             display: 'flex',
-            justifyContent: 'space-between',
-            fontFamily: 'var(--font-mono)',
-            fontSize: 10,
-            color: 'var(--ink-60)',
-            marginTop: 6,
-            fontVariantNumeric: 'tabular-nums',
+            alignItems: 'baseline',
+            gap: 6,
+            marginBottom: 10,
           }}
         >
-          <span>{fmtTime(progress)}</span>
-          <span>{fmtTime(duration)}</span>
+          <span
+            style={{
+              fontFamily: 'var(--font-sans)',
+              fontSize: 15,
+              fontWeight: 700,
+              color: '#fff',
+              lineHeight: 1.2,
+            }}
+          >
+            {series.title}
+          </span>
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 13,
+              fontWeight: 500,
+              color: '#fff',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {String(ep).padStart(2, '0')}화
+          </span>
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 13,
+              color: 'rgba(255,255,255,0.5)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            /{series.totalEp}화
+          </span>
         </div>
+
+        <ProgressBar value={progress} total={duration} />
       </div>
     </>
   );

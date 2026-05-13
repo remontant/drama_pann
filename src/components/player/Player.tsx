@@ -344,15 +344,14 @@ export default function Player({
           display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center',
         }}
       >
+        <RailButton onClick={onHeartPress}>
+          <Heart size={22} strokeWidth={1.75} />
+        </RailButton>
         <RailButton onClick={() => { trackView(isMuted ? '/click/mute/off' : '/click/mute/on', '음소거 토글'); onToggleMute(); }}>
           {isMuted ? <Mute size={22} strokeWidth={1.75} /> : <Volume size={22} strokeWidth={1.75} />}
         </RailButton>
         <RailButton onClick={() => { trackView('/click/bottomsheet/open', '회차목록 열기'); onOpenBottomSheet(); }}>
           <List size={22} strokeWidth={1.75} />
-        </RailButton>
-        <div style={{ height: 10 }} />
-        <RailButton onClick={onHeartPress}>
-          <Heart size={22} strokeWidth={1.75} />
         </RailButton>
       </div>
     </div>
