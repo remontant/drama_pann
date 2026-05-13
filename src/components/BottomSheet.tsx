@@ -330,8 +330,7 @@ export default function BottomSheet({
                 letterSpacing: '-1px',
               }}
             >
-              {/* {series.title}의 이어지는 이야기는 현재 준비 중입니다. */}
-              이어지는 이야기는 현재 준비 중입니다.
+              {series.title}의 이어지는 이야기는 현재 준비 중입니다.
             </span>
           </div>
         </div>
