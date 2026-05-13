@@ -25,23 +25,13 @@ export default function PlayerChrome({ series, ep, progress, duration }: Props) 
         }}
       />
 
-      {/* 하단 넓은 그라디언트 */}
+      {/* 하단 그라디언트 */}
       <div
         style={{
           position: 'absolute',
           inset: 'auto 0 0 0',
-          height: '38%',
-          background: 'linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0.2) 60%, transparent)',
-          pointerEvents: 'none',
-        }}
-      />
-      {/* 하단 인디케이터 전용 강조 */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 'auto 0 0 0',
-          height: 90,
-          background: 'linear-gradient(to top, rgba(0,0,0,0.88) 40%, transparent)',
+          height: 86,
+          background: 'linear-gradient(180deg, rgba(0,0,0,0.00) 0%, rgba(0,0,0,0.60) 40%, #000 100%)',
           pointerEvents: 'none',
         }}
       />
@@ -100,7 +90,7 @@ export default function PlayerChrome({ series, ep, progress, duration }: Props) 
           bottom: 0,
           left: 0,
           right: 0,
-          padding: '0 18px 20px',
+          padding: '0 18px 24px',
           zIndex: 2,
         }}
       >
