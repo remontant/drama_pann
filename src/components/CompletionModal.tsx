@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { trackView } from '@/lib/gtag';
+import { getSeries } from '@/lib/data';
 
 interface Props {
   seriesId: string;
@@ -7,7 +8,8 @@ interface Props {
   onClose: () => void;
 }
 
-export default function CompletionModal({ onOtherContent, onClose }: Props) {
+export default function CompletionModal({ seriesId, onOtherContent, onClose }: Props) {
+  const series = getSeries(seriesId)!;
   useEffect(() => { trackView('/modal/completion', '완료 모달'); }, []);
 
   return (

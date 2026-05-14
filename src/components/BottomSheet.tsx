@@ -2,6 +2,12 @@ import { useState, useRef, useEffect } from 'react';
 import { SERIES, getSeries } from '@/lib/data';
 import { trackView } from '@/lib/gtag';
 
+function extractYouTubeId(url?: string): string | null {
+  if (!url) return null;
+  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|shorts\/|watch\?v=|\?v=))([\w-]{11})/);
+  return match ? match[1] : null;
+}
+
 interface Props {
   seriesId: string;
   currentEpIdx: number;
@@ -45,6 +51,7 @@ export default function BottomSheet({
     ep: i + 1,
     available: i < availableCount,
     idx: i,
+    videoUrl: i < availableCount ? series.episodes[i].videoUrl : undefined,
   }));
 
   const otherSeries = SERIES;
@@ -113,7 +120,7 @@ export default function BottomSheet({
           right: 0,
           background: '#0e0e0e',
           borderRadius: '20px 20px 0 0',
-          maxHeight: '82vh',
+          height: 'calc(608 / 750 * 100dvh)',
           display: 'flex',
           flexDirection: 'column',
           transform: 'translateY(0)',
@@ -163,58 +170,148 @@ export default function BottomSheet({
                 cursor: 'pointer',
               }}
             >
-              {tab === 'episodes' ? '회차 정보' : '다른 콘텐츠'}
+              {tab === 'episodes' ? '회차정보' : '다른 콘텐츠'}
             </button>
           ))}
         </div>
 
         {/* Tab content */}
-        <div style={{ overflowY: 'auto', flex: 1, padding: 20 }}>
+        <div style={{ overflowY: 'auto', flex: 1, padding: '16px 20px 0' }}>
           {activeTab === 'episodes' ? (
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(7, 1fr)',
-                gap: 8,
-              }}
-            >
-              {allEpisodes.map((ep) => {
-                const isCurrent = ep.idx === currentEpIdx;
-                return (
-                  <button
-                    key={ep.ep}
-                    onClick={() => handleEpClick(ep)}
-                    style={{
-                      aspectRatio: '1',
-                      borderRadius: 10,
-                      border: isCurrent
-                        ? '2px solid var(--plot-red)'
-                        : '1px solid rgba(255,255,255,0.12)',
-                      background: isCurrent
-                        ? 'rgba(229,9,20,0.18)'
-                        : ep.available
-                        ? 'rgba(255,255,255,0.07)'
-                        : 'rgba(255,255,255,0.02)',
-                      color: isCurrent
-                        ? 'var(--plot-red)'
-                        : ep.available
-                        ? '#fff'
-                        : 'rgba(255,255,255,0.2)',
-                      fontSize: 12,
-                      fontWeight: isCurrent ? 700 : 500,
-                      fontFamily: 'var(--font-mono)',
-                      cursor: ep.available ? 'pointer' : 'default',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      transition: 'background 120ms',
-                    }}
-                  >
-                    {String(ep.ep).padStart(2, '0')}
-                  </button>
-                );
-              })}
-            </div>
+            <>
+              {/* Series title */}
+              <div
+                style={{
+                  fontSize: 16,
+                  fontWeight: 700,
+                  color: '#fff',
+                  marginBottom: 14,
+                  padding: '0 4px',
+                  letterSpacing: '-0.3px',
+                  fontFamily: 'var(--font-sans)',
+                }}
+              >
+                {series.title}{' '}
+                <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: 500, fontSize: 14 }}>
+                  · 총 {series.totalEp}화
+                </span>
+              </div>
+
+              {/* 3-column episode grid */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: 10,
+                  paddingBottom: 20,
+                }}
+              >
+                {allEpisodes.map((ep) => {
+                  const isCurrent = ep.idx === currentEpIdx;
+                  return (
+                    <button
+                      key={ep.ep}
+                      onClick={() => handleEpClick(ep)}
+                      style={{
+                        position: 'relative',
+                        aspectRatio: '104/70',
+                        borderRadius: 10,
+                        border: isCurrent ? '2px solid var(--plot-red)' : '2px solid transparent',
+                        background: '#242424',
+                        cursor: ep.available ? 'pointer' : 'default',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: 0,
+                        overflow: 'hidden',
+                        transition: 'filter 120ms',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (ep.available) (e.currentTarget as HTMLButtonElement).style.filter = 'brightness(1.15)';
+                      }}
+                      onMouseLeave={(e) => {
+                        (e.currentTarget as HTMLButtonElement).style.filter = 'brightness(1)';
+                      }}
+                    >
+                      {/* YouTube thumbnail (공개 화차만) */}
+                      {ep.available && (() => {
+                        const thumbId = extractYouTubeId(ep.videoUrl);
+                        return thumbId ? (
+                          <img
+                            src={`https://img.youtube.com/vi/${thumbId}/mqdefault.jpg`}
+                            alt=""
+                            style={{
+                              position: 'absolute',
+                              inset: 0,
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
+                              objectPosition: 'center center',
+                            }}
+                          />
+                        ) : (
+                          <div style={{
+                            position: 'absolute',
+                            inset: 0,
+                            background: 'linear-gradient(145deg, #E50914 0%, #8B0000 100%)',
+                          }} />
+                        );
+                      })()}
+
+                      {/* 썸네일 위 어둠 오버레이 */}
+                      {ep.available && (
+                        <div style={{
+                          position: 'absolute',
+                          inset: 0,
+                          background: 'rgba(0,0,0,0.25)',
+                        }} />
+                      )}
+
+                      {/* Play button */}
+                      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" fill="none"
+                        style={{ position: 'relative', zIndex: 1, opacity: ep.available ? 1 : 0.3 }}
+                      >
+                        <rect x="0.5" y="0.5" width="31" height="31" rx="15.5" fill="black" fillOpacity="0.5"/>
+                        <rect x="0.5" y="0.5" width="31" height="31" rx="15.5" stroke="#999999"/>
+                        <path d="M12.2667 20.6446V11.0455C12.2667 10.1965 13.2103 9.68772 13.9196 10.1543L21.0719 14.8598C21.7055 15.2767 21.7139 16.203 21.088 16.6313L13.9357 21.5249C13.2278 22.0093 12.2667 21.5024 12.2667 20.6446Z" fill="white"/>
+                      </svg>
+
+                      {/* Episode number badge */}
+                      <div
+                        style={{
+                          position: 'absolute',
+                          bottom: 4,
+                          right: 4,
+                          zIndex: 1,
+                          display: 'flex',
+                          width: 36,
+                          padding: '3px 0',
+                          flexDirection: 'column',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                          borderRadius: 4,
+                          background: 'rgba(0, 0, 0, 0.30)',
+                        }}
+                      >
+                        <span
+                          style={{
+                            color: '#FFF',
+                            fontFamily: '"Apple SD Gothic Neo", var(--font-sans)',
+                            fontSize: 13,
+                            fontStyle: 'normal',
+                            fontWeight: 500,
+                            lineHeight: '15px',
+                            letterSpacing: '-0.5px',
+                          }}
+                        >
+                          {ep.ep}화
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
           ) : (
             <div
               style={{
@@ -276,65 +373,50 @@ export default function BottomSheet({
             </div>
           )}
         </div>
+
       </div>
 
-      {/* 미공개 회차 토스트 */}
-      {toastVisible && (
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 24,
-            left: 16,
-            right: 16,
-            zIndex: 30,
-            pointerEvents: 'none',
-            opacity: toastExiting ? 0 : 1,
-            transform: toastExiting ? 'translateY(8px)' : 'translateY(0)',
-            transition: 'opacity 300ms ease, transform 300ms ease',
-          }}
-        >
-          <div
+      {/* 미공개 회차 토스트 — 시트 하단에 슬라이드인 */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          zIndex: 30,
+          pointerEvents: 'none',
+          height: 84,
+          display: 'flex',
+          alignItems: 'flex-start',
+          justifyContent: 'center',
+          padding: '16px 78.5px 46px',
+          background: '#fff',
+          transform: toastVisible && !toastExiting ? 'translateY(0)' : 'translateY(100%)',
+          opacity: toastExiting ? 0 : 1,
+          transition: 'transform 300ms cubic-bezier(0.22, 1, 0.36, 1), opacity 250ms ease',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22" fill="none" style={{ flexShrink: 0 }}>
+            <circle cx="11" cy="11" r="8.5" stroke="#444444"/>
+            <circle cx="11" cy="15.5832" r="0.916667" fill="#444444"/>
+            <rect x="10.0833" y="5.9585" width="1.83333" height="7.33333" rx="0.916667" fill="#444444"/>
+          </svg>
+          <span
             style={{
-              background: '#2a2a2a',
-              borderRadius: 12,
-              padding: '14px 16px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
+              color: '#222',
+              fontFamily: '"Apple SD Gothic Neo", var(--font-sans)',
+              fontSize: 13,
+              fontWeight: 500,
+              lineHeight: '15px',
+              letterSpacing: '-0.5px',
+              whiteSpace: 'nowrap',
             }}
           >
-            <div
-              style={{
-                width: 22,
-                height: 22,
-                borderRadius: 9999,
-                border: '1.5px solid rgba(255,255,255,0.5)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-                color: 'rgba(255,255,255,0.7)',
-                fontSize: 13,
-                fontWeight: 700,
-              }}
-            >
-              !
-            </div>
-            <span
-              style={{
-                fontSize: 14,
-                fontWeight: 600,
-                color: '#fff',
-                fontFamily: 'var(--font-sans)',
-                lineHeight: '20px',
-                letterSpacing: '-1px',
-              }}
-            >
-              {series.title}의 이어지는 이야기는 현재 준비 중입니다.
-            </span>
-          </div>
+            이어지는 이야기는 현재 준비 중입니다.
+          </span>
         </div>
-      )}
+      </div>
     </div>
   );
 }
