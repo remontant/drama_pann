@@ -220,7 +220,9 @@ export default function BottomSheet({
                         aspectRatio: '104/70',
                         borderRadius: 10,
                         border: isCurrent ? '2px solid var(--plot-red)' : '2px solid transparent',
-                        background: '#242424',
+                        background: ep.available
+                          ? 'linear-gradient(180deg, #FF2C2E 0%, #610000 100%)'
+                          : '#242424',
                         cursor: ep.available ? 'pointer' : 'default',
                         display: 'flex',
                         alignItems: 'center',
