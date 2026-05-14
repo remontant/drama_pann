@@ -54,7 +54,7 @@ export default function BottomSheet({
     videoUrl: i < availableCount ? series.episodes[i].videoUrl : undefined,
   }));
 
-  const otherSeries = SERIES;
+  const otherSeries = SERIES.filter((s) => s.id !== seriesId);
 
   const handleEpClick = (ep: { available: boolean; idx: number }) => {
     if (!ep.available) {
@@ -182,18 +182,21 @@ export default function BottomSheet({
               {/* Series title */}
               <div
                 style={{
-                  fontSize: 16,
-                  fontWeight: 700,
+                  fontSize: 17,
+                  fontWeight: 600,
                   color: '#fff',
                   marginBottom: 14,
                   padding: '0 4px',
-                  letterSpacing: '-0.3px',
+                  letterSpacing: '-0.5px',
                   fontFamily: 'var(--font-sans)',
                 }}
               >
                 {series.title}{' '}
-                <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: 500, fontSize: 14 }}>
-                  · 총 {series.totalEp}화
+                <span style={{ color: '#ccc', fontWeight: 500, fontSize: 15 }}>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="4" height="4" viewBox="0 0 4 4" fill="none" style={{ margin: '0 4px', verticalAlign: 'middle' }}>
+                    <circle cx="2" cy="2" r="2" fill="#CCCCCC"/>
+                  </svg>
+                  총 {series.totalEp}화
                 </span>
               </div>
 
@@ -318,6 +321,7 @@ export default function BottomSheet({
                 display: 'grid',
                 gridTemplateColumns: 'repeat(2, 1fr)',
                 gap: 10,
+                paddingBottom: 20,
               }}
             >
               {otherSeries.map((s) => {
@@ -376,32 +380,35 @@ export default function BottomSheet({
 
       </div>
 
-      {/* 미공개 회차 토스트 — 시트 하단에 슬라이드인 */}
+      {/* 미공개 회차 토스트 */}
       <div
         style={{
           position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
+          bottom: 16,
+          left: 10,
+          right: 10,
           zIndex: 30,
           pointerEvents: 'none',
-          height: 84,
+          opacity: toastVisible && !toastExiting ? 1 : 0,
+          transform: toastVisible && !toastExiting ? 'translateY(0)' : 'translateY(10px)',
+          transition: 'opacity 250ms ease, transform 300ms cubic-bezier(0.22, 1, 0.36, 1)',
           display: 'flex',
-          alignItems: 'flex-start',
           justifyContent: 'center',
-          padding: '16px 78.5px 46px',
-          background: '#fff',
-          transform: toastVisible && !toastExiting ? 'translateY(0)' : 'translateY(100%)',
-          opacity: toastExiting ? 0 : 1,
-          transition: 'transform 300ms cubic-bezier(0.22, 1, 0.36, 1), opacity 250ms ease',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 22 22" fill="none" style={{ flexShrink: 0 }}>
-            <circle cx="11" cy="11" r="8.5" stroke="#444444"/>
-            <circle cx="11" cy="15.5832" r="0.916667" fill="#444444"/>
-            <rect x="10.0833" y="5.9585" width="1.83333" height="7.33333" rx="0.916667" fill="#444444"/>
-          </svg>
+        <div
+          style={{
+            display: 'flex',
+            width: 355,
+            padding: '16px 65.5px',
+            alignItems: 'center',
+            gap: 6,
+            borderRadius: 8,
+            background: '#FFF',
+            boxSizing: 'border-box',
+          }}
+        >
+          <span style={{ fontSize: 15, color: '#222', lineHeight: 1, flexShrink: 0 }}>ⓘ</span>
           <span
             style={{
               color: '#222',

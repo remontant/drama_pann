@@ -320,7 +320,7 @@ export default function Player({
             key={heart.id}
             style={{
               position: 'absolute',
-              bottom: 153,
+              bottom: 273,
               right: 14 + 23 - heart.size / 2,
               width: heart.size,
               height: heart.size,
