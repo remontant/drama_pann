@@ -219,7 +219,7 @@ export default function BottomSheet({
                         position: 'relative',
                         aspectRatio: '104/70',
                         borderRadius: 10,
-                        border: isCurrent ? '2px solid var(--plot-red)' : '2px solid transparent',
+                        border: 'none',
                         background: ep.available
                           ? 'linear-gradient(180deg, #FF2C2E 0%, #610000 100%)'
                           : '#242424',
@@ -280,6 +280,18 @@ export default function BottomSheet({
                         <rect x="0.5" y="0.5" width="31" height="31" rx="15.5" stroke="#999999"/>
                         <path d="M12.2667 20.6446V11.0455C12.2667 10.1965 13.2103 9.68772 13.9196 10.1543L21.0719 14.8598C21.7055 15.2767 21.7139 16.203 21.088 16.6313L13.9357 21.5249C13.2278 22.0093 12.2667 21.5024 12.2667 20.6446Z" fill="white"/>
                       </svg>
+
+                      {/* 현재 회차 border 오버레이 */}
+                      {isCurrent && (
+                        <div style={{
+                          position: 'absolute',
+                          inset: 0,
+                          borderRadius: 10,
+                          border: '2px solid var(--plot-red)',
+                          zIndex: 2,
+                          pointerEvents: 'none',
+                        }} />
+                      )}
 
                       {/* Episode number badge */}
                       <div
