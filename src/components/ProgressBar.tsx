@@ -11,7 +11,7 @@ export default function ProgressBar({ value, total, thick = false }: Props) {
       style={{
         height: thick ? 6 : 3,
         background: 'var(--ink-20)',
-        borderRadius: 9999,
+        borderRadius: 0,
         overflow: 'hidden',
       }}
     >
@@ -20,7 +20,7 @@ export default function ProgressBar({ value, total, thick = false }: Props) {
           height: '100%',
           width: `${pct}%`,
           background: '#E63946',
-          borderRadius: 9999,
+          borderRadius: 0,
           transition: 'width 200ms linear',
         }}
       />

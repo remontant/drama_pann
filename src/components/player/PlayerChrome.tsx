@@ -43,7 +43,8 @@ export default function PlayerChrome({ series, ep, progress, duration }: Props) 
           top: 0,
           left: 0,
           right: 0,
-          padding: '16px 20px 0',
+          height: 54,
+          padding: '0 20px',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -83,74 +84,78 @@ export default function PlayerChrome({ series, ep, progress, duration }: Props) 
         </button>
       </div>
 
-      {/* 하단 — 시리즈 정보 + 프로그레스 */}
+      {/* 시리즈명 + 에피소드 — bottom 40 */}
       <div
         style={{
           position: 'absolute',
-          bottom: 0,
+          bottom: 40,
           left: 0,
           right: 0,
-          padding: '0 18px 24px',
+          padding: '0 18px',
+          display: 'flex',
+          alignItems: 'baseline',
+          gap: 6,
+          overflow: 'hidden',
           zIndex: 2,
         }}
       >
-        {/* 시리즈명 + 에피소드 (1줄) */}
-        <div
+        <span
           style={{
-            display: 'flex',
-            alignItems: 'baseline',
-            gap: 6,
-            marginBottom: 10,
+            fontFamily: 'var(--font-sans)',
+            fontSize: 17,
+            fontWeight: 600,
+            lineHeight: '24px',
+            letterSpacing: '-0.5px',
+            color: '#fff',
             overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            flexShrink: 1,
+            minWidth: 0,
           }}
         >
-          <span
-            style={{
-              fontFamily: 'var(--font-sans)',
-              fontSize: 17,
-              fontWeight: 600,
-              lineHeight: '24px',
-              letterSpacing: '-0.5px',
-              color: '#fff',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              flexShrink: 1,
-              minWidth: 0,
-            }}
-          >
-            {series.title}
-          </span>
-          <span
-            style={{
-              fontFamily: 'var(--font-sans)',
-              fontSize: 15,
-              fontWeight: 600,
-              lineHeight: '20px',
-              letterSpacing: '-0.5px',
-              color: '#fff',
-              whiteSpace: 'nowrap',
-              flexShrink: 0,
-            }}
-          >
-            {String(ep).padStart(2, '0')}화
-          </span>
-          <span
-            style={{
-              fontFamily: 'var(--font-sans)',
-              fontSize: 15,
-              fontWeight: 400,
-              lineHeight: '20px',
-              letterSpacing: '-0.5px',
-              color: '#CCC',
-              whiteSpace: 'nowrap',
-              flexShrink: 0,
-            }}
-          >
-            /{series.totalEp}화
-          </span>
-        </div>
+          {series.title}
+        </span>
+        <span
+          style={{
+            fontFamily: 'var(--font-sans)',
+            fontSize: 15,
+            fontWeight: 600,
+            lineHeight: '20px',
+            letterSpacing: '-0.5px',
+            color: '#fff',
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
+          }}
+        >
+          {String(ep).padStart(2, '0')}화
+        </span>
+        <span
+          style={{
+            fontFamily: 'var(--font-sans)',
+            fontSize: 15,
+            fontWeight: 400,
+            lineHeight: '20px',
+            letterSpacing: '-0.5px',
+            color: '#CCC',
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
+          }}
+        >
+          /{series.totalEp}화
+        </span>
+      </div>
 
+      {/* 프로그레스바 — edge to edge, bottom 16 */}
+      <div
+        style={{
+          position: 'absolute',
+          bottom: 16,
+          left: 0,
+          right: 0,
+          zIndex: 2,
+        }}
+      >
         <ProgressBar value={progress} total={duration} />
       </div>
     </>
