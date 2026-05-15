@@ -1,7 +1,8 @@
 const PAGE_ID = 'mw2605';
 const NDRU3 = '';
 const NDRL3 = '';
-const PV_VIRTUAL_URL = 'm_ndr.nate.com/m_shortform/dramapann';
+const PV_PAGE_URL   = 'm_ndr.nate.com/m_shortform/dramapann';
+const PV_MODAL_URL  = 'm_ndr.nate.com/m_shortform/f_dramapann';
 
 export const NDR = {
   PLAYER_TAP:     'STD01',
@@ -28,11 +29,13 @@ export function vndrCall(regionId: string) {
   console.log(`[NDR click] pageId=${PAGE_ID} regionId=${regionId} → ${src}`);
 }
 
-export function fireNdrPV() {
+function firePV(virtualUrl: string) {
   const dummy = new Date().getTime();
-  const src =
-    `https://stat.nate.com/stat/mstat.tiff?cp_url=[${PV_VIRTUAL_URL}]t=${dummy}`;
+  const src = `https://stat.nate.com/stat/mstat.tiff?cp_url=[${virtualUrl}]t=${dummy}`;
   const img = new Image();
   img.src = src;
-  console.log(`[NDR PV] url=${PV_VIRTUAL_URL} → ${src}`);
+  console.log(`[NDR PV] url=${virtualUrl} → ${src}`);
 }
+
+export function firePagePV()  { firePV(PV_PAGE_URL); }
+export function fireModalPV() { firePV(PV_MODAL_URL); }

@@ -4,6 +4,7 @@ import BottomSheet from './BottomSheet';
 import CompletionModal from './CompletionModal';
 import Main from './screens/Main';
 import { SERIES } from '@/lib/data';
+import { firePagePV } from '@/lib/ndr';
 
 function pickRandomSeries(excludeId?: string): string {
   const available = SERIES.filter((s) => !s.isComingSoon && s.id !== excludeId);
@@ -26,6 +27,7 @@ export default function App() {
     const found = qSeries ? SERIES.find((s) => s.id === qSeries) : null;
     setSeriesId(found ? found.id : pickRandomSeries());
     setMounted(true);
+    firePagePV();
   }, []);
 
   const handleSelectSeries = (id: string) => {

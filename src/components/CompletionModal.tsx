@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { trackView } from '@/lib/gtag';
-import { vndrCall, fireNdrPV, NDR } from '@/lib/ndr';
+import { vndrCall, fireModalPV, NDR } from '@/lib/ndr';
 import { getSeries } from '@/lib/data';
 
 interface Props {
@@ -13,7 +13,7 @@ export default function CompletionModal({ seriesId, onOtherContent, onClose }: P
   const series = getSeries(seriesId)!;
   useEffect(() => {
     trackView('/modal/completion', '완료 모달');
-    fireNdrPV();
+    fireModalPV();
   }, []);
 
   return (
