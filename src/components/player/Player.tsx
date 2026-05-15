@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Play, List, Mute, Volume, Heart } from '@/components/Icons';
+import { Play, Pause, List, Mute, Volume, Heart } from '@/components/Icons';
 import { FeedEntry, getSeries } from '@/lib/data';
 import { trackView } from '@/lib/gtag';
 import { vndrCall, NDR } from '@/lib/ndr';
@@ -86,6 +86,8 @@ export default function Player({
   const [progress, setProgress] = useState(0);
   const [realDuration, setRealDuration] = useState(entry.duration ?? 90);
   const [paused, setPaused] = useState(false);
+  const [pauseFlash, setPauseFlash] = useState(false);
+  const pauseFlashRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isReady, setIsReady] = useState(false);
 
   interface FloatingHeart {
@@ -251,7 +253,14 @@ export default function Player({
   const togglePause = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('[data-noprop]')) return;
     vndrCall(NDR.PLAYER_TAP);
-    setPaused((p) => !p);
+    setPaused((p) => {
+      if (!p) {
+        if (pauseFlashRef.current) clearTimeout(pauseFlashRef.current);
+        setPauseFlash(true);
+        pauseFlashRef.current = setTimeout(() => setPauseFlash(false), 700);
+      }
+      return !p;
+    });
   }, []);
 
   return (
@@ -295,7 +304,7 @@ export default function Player({
         </div>
       )}
 
-      {paused && (
+      {(paused || pauseFlash) && (
         <div
           style={{
             position: 'absolute', inset: 0,
@@ -311,7 +320,9 @@ export default function Player({
               color: 'var(--ink)',
             }}
           >
-            <Play size={32} strokeWidth={0} fill="var(--ink)" />
+            {pauseFlash && paused
+              ? <Pause size={36} strokeWidth={0} fill="var(--ink)" />
+              : <Play  size={36} strokeWidth={0} fill="var(--ink)" />}
           </div>
         </div>
       )}
