@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Play, List, Mute, Volume, Heart } from '@/components/Icons';
 import { FeedEntry, getSeries } from '@/lib/data';
 import { trackView } from '@/lib/gtag';
+import { vndrCall, NDR } from '@/lib/ndr';
 
 let _ytApiCallbacks: (() => void)[] = [];
 
@@ -101,6 +102,7 @@ export default function Player({
 
   const onHeartPress = useCallback(() => {
     trackView('/click/heart', '하트 버튼');
+    vndrCall(NDR.HEART);
     const heart: FloatingHeart = {
       id: Date.now() + Math.random(),
       size: 18 + Math.floor(Math.random() * 14),
@@ -248,6 +250,7 @@ export default function Player({
 
   const togglePause = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('[data-noprop]')) return;
+    vndrCall(NDR.PLAYER_TAP);
     setPaused((p) => !p);
   }, []);
 
@@ -347,10 +350,10 @@ export default function Player({
         <RailButton onClick={onHeartPress}>
           <Heart size={22} strokeWidth={1.75} />
         </RailButton>
-        <RailButton onClick={() => { trackView(isMuted ? '/click/mute/off' : '/click/mute/on', '음소거 토글'); onToggleMute(); }}>
+        <RailButton onClick={() => { trackView(isMuted ? '/click/mute/off' : '/click/mute/on', '음소거 토글'); vndrCall(NDR.MUTE); onToggleMute(); }}>
           {isMuted ? <Mute size={22} strokeWidth={1.75} /> : <Volume size={22} strokeWidth={1.75} />}
         </RailButton>
-        <RailButton onClick={() => { trackView('/click/bottomsheet/open', '회차목록 열기'); onOpenBottomSheet(); }}>
+        <RailButton onClick={() => { trackView('/click/bottomsheet/open', '회차목록 열기'); vndrCall(NDR.EPISODE_LIST); onOpenBottomSheet(); }}>
           <List size={22} strokeWidth={1.75} />
         </RailButton>
       </div>

@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { trackView } from '@/lib/gtag';
+import { vndrCall, fireNdrPV, NDR } from '@/lib/ndr';
 import { getSeries } from '@/lib/data';
 
 interface Props {
@@ -10,7 +11,10 @@ interface Props {
 
 export default function CompletionModal({ seriesId, onOtherContent, onClose }: Props) {
   const series = getSeries(seriesId)!;
-  useEffect(() => { trackView('/modal/completion', '완료 모달'); }, []);
+  useEffect(() => {
+    trackView('/modal/completion', '완료 모달');
+    fireNdrPV();
+  }, []);
 
   return (
     <div
@@ -69,7 +73,7 @@ export default function CompletionModal({ seriesId, onOtherContent, onClose }: P
         </div>
 
         <button
-          onClick={() => { trackView('/click/completion/other-content', '다른 콘텐츠 보기'); onOtherContent(); }}
+          onClick={() => { trackView('/click/completion/other-content', '다른 콘텐츠 보기'); vndrCall(NDR.OTHER_CONTENT); onOtherContent(); }}
           style={{
             width: '100%',
             padding: '16px 0',

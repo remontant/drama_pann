@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { SERIES, getSeries } from '@/lib/data';
 import { trackView } from '@/lib/gtag';
+import { vndrCall, NDR } from '@/lib/ndr';
 
 function extractYouTubeId(url?: string): string | null {
   if (!url) return null;
@@ -60,9 +61,11 @@ export default function BottomSheet({
     if (!ep.available) {
       showToast();
       trackView('/click/bottomsheet/episode/unavailable', '미공개 회차 클릭');
+      vndrCall(NDR.EP_UNAVAILABLE);
       return;
     }
     trackView('/click/bottomsheet/episode/available', '공개 회차 클릭');
+    vndrCall(NDR.EP_AVAILABLE);
     onSelectEpisode(ep.idx);
   };
 
@@ -154,7 +157,10 @@ export default function BottomSheet({
           {(['episodes', 'other'] as const).map((tab) => (
             <button
               key={tab}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => {
+                setActiveTab(tab);
+                vndrCall(tab === 'episodes' ? NDR.TAB_EPISODES : NDR.TAB_OTHER);
+              }}
               style={{
                 flex: 1,
                 padding: '14px 0',
@@ -343,7 +349,7 @@ export default function BottomSheet({
                 return (
                   <button
                     key={s.id}
-                    onClick={isCurrent ? undefined : () => { trackView(`/click/bottomsheet/series/${s.title}`, `시리즈 선택 ${s.title}`); onSelectSeries(s.id); }}
+                    onClick={isCurrent ? undefined : () => { trackView(`/click/bottomsheet/series/${s.title}`, `시리즈 선택 ${s.title}`); vndrCall(NDR.TAB_OTHER); onSelectSeries(s.id); }}
                     style={{
                       background: 'transparent',
                       border: 'none',

@@ -3,6 +3,7 @@ import { getFeedFor, getSeries } from '@/lib/data';
 import Player from '@/components/player/Player';
 import PlayerChrome from '@/components/player/PlayerChrome';
 import { trackView } from '@/lib/gtag';
+import { vndrCall, NDR } from '@/lib/ndr';
 
 interface Props {
   seriesId: string;
@@ -92,9 +93,11 @@ export default function Feed({ seriesId, epIdx, onEpChange, onOpenBottomSheet, o
 
     if (delta < -50) {
       trackView('/click/feed/swipe-next', '다음 화 스와이프');
+      vndrCall(NDR.SWIPE_NEXT);
       tryGoNext();
     } else if (delta > 50 && epIdx > 0) {
       trackView('/click/feed/swipe-prev', '이전 화 스와이프');
+      vndrCall(NDR.SWIPE_PREV);
       onEpChange(epIdx - 1);
     }
 
