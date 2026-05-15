@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Play, Pause, List, Mute, Volume, Heart } from '@/components/Icons';
+import { List, Mute, Volume, Heart } from '@/components/Icons';
 import { FeedEntry, getSeries } from '@/lib/data';
 import { trackView } from '@/lib/gtag';
 import { vndrCall, NDR } from '@/lib/ndr';
@@ -86,8 +86,6 @@ export default function Player({
   const [progress, setProgress] = useState(0);
   const [realDuration, setRealDuration] = useState(entry.duration ?? 90);
   const [paused, setPaused] = useState(false);
-  const [pauseFlash, setPauseFlash] = useState(false);
-  const pauseFlashRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isReady, setIsReady] = useState(false);
 
   interface FloatingHeart {
@@ -253,14 +251,7 @@ export default function Player({
   const togglePause = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('[data-noprop]')) return;
     vndrCall(NDR.PLAYER_TAP);
-    setPaused((p) => {
-      if (!p) {
-        if (pauseFlashRef.current) clearTimeout(pauseFlashRef.current);
-        setPauseFlash(true);
-        pauseFlashRef.current = setTimeout(() => setPauseFlash(false), 700);
-      }
-      return !p;
-    });
+    setPaused((p) => !p);
   }, []);
 
   return (
@@ -304,28 +295,6 @@ export default function Player({
         </div>
       )}
 
-      {(paused || pauseFlash) && (
-        <div
-          style={{
-            position: 'absolute', inset: 0,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 3, pointerEvents: 'none',
-          }}
-        >
-          <div
-            style={{
-              width: 80, height: 80, borderRadius: 9999,
-              background: 'var(--paper-60)', backdropFilter: 'blur(16px)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'var(--ink)',
-            }}
-          >
-            {pauseFlash && paused
-              ? <Pause size={36} strokeWidth={0} fill="var(--ink)" />
-              : <Play  size={36} strokeWidth={0} fill="var(--ink)" />}
-          </div>
-        </div>
-      )}
 
       {/* 플로팅 하트 오버레이 */}
       <div style={{ position: 'absolute', inset: 0, zIndex: 5, pointerEvents: 'none' }}>
