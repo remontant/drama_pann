@@ -33,6 +33,7 @@ export default function CompletionModal({ seriesId, onOtherContent, onClose }: P
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
+          position: 'relative',
           width: '100%',
           margin: '0 16px 32px',
           background: '#1c1c1c',
@@ -41,6 +42,29 @@ export default function CompletionModal({ seriesId, onOtherContent, onClose }: P
           textAlign: 'center',
         }}
       >
+        <button
+          onClick={onClose}
+          style={{
+            position: 'absolute',
+            top: 16,
+            right: 16,
+            width: 24,
+            height: 24,
+            background: 'transparent',
+            border: 'none',
+            padding: 0,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M19 5L5 19" stroke="#666666" strokeWidth="2" strokeMiterlimit="10" strokeLinecap="round"/>
+            <path d="M19 19L5 5" stroke="#666666" strokeWidth="2" strokeMiterlimit="10" strokeLinecap="round"/>
+          </svg>
+        </button>
+
         <div
           style={{
             fontSize: 18,
