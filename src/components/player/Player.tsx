@@ -324,7 +324,7 @@ export default function Player({
         onClick={(e) => e.stopPropagation()}
         style={{
           position: 'absolute', right: 14, bottom: 86, zIndex: 4,
-          display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center',
+          display: 'flex', flexDirection: 'column', gap: 20, alignItems: 'center',
         }}
       >
         {/* <RailButton onClick={onHeartPress}>
