@@ -323,13 +323,13 @@ export default function Player({
         data-noprop="true"
         onClick={(e) => e.stopPropagation()}
         style={{
-          position: 'absolute', right: 14, bottom: 130, zIndex: 4,
+          position: 'absolute', right: 14, bottom: 86, zIndex: 4,
           display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center',
         }}
       >
-        <RailButton onClick={onHeartPress}>
+        {/* <RailButton onClick={onHeartPress}>
           <Heart size={22} strokeWidth={1.75} />
-        </RailButton>
+        </RailButton> */}
         <RailButton onClick={() => { trackView(isMuted ? '/click/mute/off' : '/click/mute/on', '음소거 토글'); vndrCall(NDR.MUTE); onToggleMute(); }}>
           {isMuted ? <Mute size={22} strokeWidth={1.75} /> : <Volume size={22} strokeWidth={1.75} />}
         </RailButton>
