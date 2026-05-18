@@ -11,17 +11,16 @@ Drama Pann은 유튜브 기반 세로형 숏폼 시리즈 드라마를 감상할
 
 - **목적**: 세로형 숏폼 비디오 피드 전환 UX 및 시청 행동 데이터 수집 검증
 - **운영 기간**: 2주 라이브 PoC
-- **배포**: [drama-pann.vercel.app](https://drama-pann.vercel.app)
+- **배포**: [shortform.nate.com/dramapann](https://shortform.nate.com/dramapann)
 
 ### 주요 기능
 
 - **숏폼 피드 플레이어**: 100% 뷰포트 세로형 YouTube 영상 재생
 - **스와이프 에피소드 전환**: 터치(모바일) / 휠(PC) 상하 스와이프로 다음·이전 화 이동
-- **회차 정보 바텀시트**: 전체 회차 목록 + 다른 콘텐츠 탭
+- **회차 정보 바텀시트**: 전체 회차 목록(YouTube 썸네일) + 다른 콘텐츠 탭
 - **시청 완료 모달**: 마지막 화 시청 후 노출
-- **플로팅 하트 애니메이션**: 인스타 라이브 스타일 연속 하트 UI
 - **음소거 토글**: 최초 음소거 → 버튼으로 온/오프
-- **GA4 이벤트 트래킹**: 가상 URL 기반 클릭/노출 수치 수집
+- **통계 트래킹**: GA4 이벤트 + Nate NDR 클릭/PV 통계
 
 ---
 
@@ -29,44 +28,45 @@ Drama Pann은 유튜브 기반 세로형 숏폼 시리즈 드라마를 감상할
 
 | 항목 | 내용 |
 |---|---|
-| Framework | Next.js 16.2.6 (App Router) |
-| Library | React 18 |
+| Framework | Vite 5.4 |
+| Library | React 18.3 |
 | Language | TypeScript 5 |
 | Styling | Vanilla CSS (CSS Variables 디자인 토큰) |
 | Icons | Lucide React |
 | Player | YouTube IFrame API (`YT.Player`) |
-| Analytics | Google Analytics 4 (가상 URL 방식) |
-| Deployment | Vercel |
+| Analytics | Google Analytics 4 + Nate NDR 통계 |
+| Deployment | shortform.nate.com/dramapann |
 
 ---
 
 ## 📂 폴더 구조
 
 ```
-drama_pann/
+dramaPann/
 ├── src/
-│   ├── app/
-│   │   ├── layout.tsx          # 루트 레이아웃, GA4 스크립트 삽입
-│   │   ├── globals.css         # 디자인 토큰 및 전역 스타일
-│   │   ├── page.tsx            # 진입점 → App 렌더
-│   │   └── main/
-│   │       └── page.tsx        # 테스트용 메인 페이지 (/main)
+│   ├── main.tsx                # 진입점
 │   ├── components/
 │   │   ├── App.tsx             # 루트 상태 관리 (시리즈, 에피소드, 모달)
 │   │   ├── BottomSheet.tsx     # 회차정보 + 다른 콘텐츠 바텀시트
 │   │   ├── CompletionModal.tsx # 시청 완료 모달
+│   │   ├── DramaBi.tsx         # 드라마판 BI 컴포넌트
 │   │   ├── Icons.tsx           # Lucide 아이콘 re-export
 │   │   ├── ProgressBar.tsx     # 재생 프로그레스 바
 │   │   ├── player/
-│   │   │   ├── Player.tsx      # YouTube IFrame API 플레이어 + 하트 애니메이션
+│   │   │   ├── Player.tsx      # YouTube IFrame API 플레이어
 │   │   │   └── PlayerChrome.tsx # 플레이어 UI 오버레이 (상단바, 하단 진행바)
 │   │   └── screens/
-│   │       └── Feed.tsx        # 스와이프 피드 (에피소드 목록 + 전환 로직)
+│   │       ├── Feed.tsx        # 스와이프 피드 (에피소드 전환 로직)
+│   │       └── Main.tsx        # 테스트용 메인 페이지 (?page=main)
 │   └── lib/
-│       ├── data.ts             # 시리즈·에피소드 하드코딩 데이터 + 유틸
-│       └── gtag.ts             # GA4 가상 URL 트래킹 유틸
+│       ├── data.ts             # 시리즈·에피소드 데이터 + 유틸
+│       ├── gtag.ts             # GA4 가상 URL 트래킹 유틸
+│       └── ndr.ts              # Nate NDR 클릭/PV 통계 유틸
 └── public/
-    └── assets/                 # 파비콘, 로고 SVG
+    └── assets/
+        ├── posters/            # 시리즈 포스터 이미지
+        ├── og.svg              # OG 이미지
+        └── favicon.svg         # 파비콘
 ```
 
 ---
@@ -81,14 +81,10 @@ npm install
 
 **2. 환경변수 설정**
 
-`.env.local.example`을 복사해 `.env.local` 생성 후 GA4 측정 ID 입력:
-
-```bash
-cp .env.local.example .env.local
-```
+`.env.local` 생성 후 GA4 측정 ID 입력:
 
 ```env
-NEXT_PUBLIC_GA_MEASUREMENT_ID=G-XXXXXXXXXX
+VITE_GA_MEASUREMENT_ID=G-XXXXXXXXXX
 ```
 
 > GA_ID 없이도 실행 가능. 트래킹만 비활성화됨.
@@ -99,29 +95,49 @@ NEXT_PUBLIC_GA_MEASUREMENT_ID=G-XXXXXXXXXX
 npm run dev
 ```
 
-`http://localhost:3000` 접속
+`http://localhost:5173` 접속
+
+**4. 빌드**
+
+```bash
+npm run build
+```
 
 ---
 
-## 📊 GA4 트래킹 이벤트
+## 📊 통계 트래킹
 
-가상 URL(`page_view` 이벤트) 방식으로 수집. GA4 → 탐색 → 자유형식에서 `페이지 경로` 기준으로 조회.
+### GA4 이벤트 (가상 URL 방식)
 
 | 가상 경로 | 의미 |
 |---|---|
-| `/` | 메인 PV |
 | `/modal/completion` | 시청 완료 모달 노출 |
-| `/click/heart` | 하트 버튼 클릭 |
 | `/click/mute/on` | 음소거 켜기 |
 | `/click/mute/off` | 음소거 끄기 |
 | `/click/bottomsheet/open` | 회차목록 열기 |
 | `/click/bottomsheet/episode/available` | 공개 회차 클릭 |
 | `/click/bottomsheet/episode/unavailable` | 미공개 회차 클릭 |
 | `/click/bottomsheet/series/{시리즈명}` | 특정 시리즈 선택 |
-| `/click/player/close` | X 버튼 (플레이어 닫기) |
 | `/click/completion/other-content` | 다른 콘텐츠 보기 클릭 |
 | `/click/feed/swipe-next` | 다음 화 스와이프 |
 | `/click/feed/swipe-prev` | 이전 화 스와이프 |
+
+### Nate NDR 통계 (pageId: mw2605)
+
+| 구분 | 항목 | 값 |
+|---|---|---|
+| PV | 페이지 진입 | `m_ndr.nate.com/m_shortform/dramapann` |
+| PV | 시청완료 모달 노출 | `m_ndr.nate.com/m_shortform/f_dramapann` |
+| Click | 영상 탭 (일시정지/재생) | STD01 |
+| Click | 음소거 버튼 | STD03 |
+| Click | 회차목록 버튼 | STD04 |
+| Click | 회차정보 탭 | STD05 |
+| Click | 공개 회차 클릭 | STD06 |
+| Click | 미공개 회차 클릭 | STD07 |
+| Click | 다른 콘텐츠 탭 / 시리즈 선택 | STD08 |
+| Click | 이전 화 스와이프 | STD09 |
+| Click | 다음 화 스와이프 | STD10 |
+| Click | 다른 컨텐츠 보기 버튼 | STD11 |
 
 ---
 
@@ -136,17 +152,11 @@ npm run dev
 - React state가 아닌 DOM `transform` 직접 제어로 60fps 네이티브 앱 수준 스와이프 구현
 - 마지막 화에서 80% 이상 시청 후 위 스와이프 시 완료 모달 노출
 
-### 3. 플로팅 하트 애니메이션 (`Player.tsx`)
-- 클릭마다 랜덤 크기·색상·방향의 하트가 위로 떠오르는 CSS keyframe 애니메이션
-- 카운트 없음, 저장 없음 — 순수 UX 피드백용
+### 3. 회차 바텀시트 (`BottomSheet.tsx`)
+- 공개 회차: YouTube 썸네일 이미지 자동 로드 (`img.youtube.com`)
+- 현재 시청 중인 회차: 빨간 border 오버레이로 강조
+- 미공개 회차 클릭 시 토스트 안내
 
 ### 4. 콘텐츠 데이터 (`lib/data.ts`)
-- 8개 시리즈, 시리즈당 5화 YouTube URL 하드코딩
+- 8개 시리즈, 시리즈당 5~6화 YouTube URL 하드코딩
 - 썸네일은 YouTube 이미지 CDN(`i.ytimg.com`) 사용
-
----
-
-## 🔗 관련 링크
-
-- **배포 URL**: https://drama-pann.vercel.app
-- **테스트 메인 페이지**: https://drama-pann.vercel.app/main
