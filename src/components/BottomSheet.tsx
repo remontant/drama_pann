@@ -29,19 +29,24 @@ export default function BottomSheet({
   const [toastVisible, setToastVisible] = useState(false);
   const [toastExiting, setToastExiting] = useState(false);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toastExitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showToast = () => {
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    if (toastExitTimerRef.current) clearTimeout(toastExitTimerRef.current);
     setToastExiting(false);
     setToastVisible(true);
     trackView('/toast/unavailable-episode', '미공개 회차 안내 토스트');
     toastTimerRef.current = setTimeout(() => {
       setToastExiting(true);
-      setTimeout(() => setToastVisible(false), 300);
+      toastExitTimerRef.current = setTimeout(() => setToastVisible(false), 300);
     }, 3000);
   };
 
-  useEffect(() => () => { if (toastTimerRef.current) clearTimeout(toastTimerRef.current); }, []);
+  useEffect(() => () => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    if (toastExitTimerRef.current) clearTimeout(toastExitTimerRef.current);
+  }, []);
 
   const sheetRef = useRef<HTMLDivElement>(null);
   const dragStartY = useRef<number | null>(null);
@@ -293,7 +298,7 @@ export default function BottomSheet({
                           position: 'absolute',
                           inset: 0,
                           borderRadius: 10,
-                          border: '2px solid var(--plot-red)',
+                          border: '1px solid var(--plot-red)',
                           zIndex: 2,
                           pointerEvents: 'none',
                         }} />

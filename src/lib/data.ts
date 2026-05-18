@@ -160,6 +160,24 @@ export const SERIES: Series[] = [
       { ep: 6, title: '6화 (4-2)', duration: 90, videoUrl: 'https://youtu.be/UL97SayONSg?si=TBAMk5cuorPTNlIO' },
     ],
   },
+  {
+    id: 'oishi',
+    title: '오이시! 서울남자',
+    tagline: '',
+    synopsis: '',
+    poster: `${BASE}assets/posters/oishi.png`,
+    genre: '커플, 로맨스',
+    season: 1,
+    totalEp: 12,
+    stills: [],
+    episodes: [
+      { ep: 1, title: '1화', duration: 90, videoUrl: 'https://youtu.be/jqh-ZgLkDBA?si=EJwhcN1boYvOV421' },
+      { ep: 2, title: '2화', duration: 90, videoUrl: 'https://youtu.be/3O_0MUyEFVI?si=ryMBtorCmymjqGSb' },
+      { ep: 3, title: '3화', duration: 90, videoUrl: 'https://youtu.be/dWdXL3d3B5Q?si=VYE4c3zL1XFzgQUw' },
+      { ep: 4, title: '4화', duration: 90, videoUrl: 'https://youtu.be/gXfOfnbYxts?si=xhztKDyioKBAppqL' },
+      { ep: 5, title: '5화', duration: 90, videoUrl: 'https://youtu.be/d6NIgoafiI0?si=d3dtezz0XDDZ3RJY' },
+    ],
+  },
 ];
 
 export function getSeries(id: string): Series | undefined {
@@ -186,10 +204,4 @@ export function getFeedFor(seriesId: string): FeedEntry[] {
     });
   }
   return entries;
-}
-
-export function fmtTime(sec: number): string {
-  const m = Math.floor(sec / 60);
-  const s = Math.floor(sec % 60);
-  return `${m}:${String(s).padStart(2, '0')}`;
 }

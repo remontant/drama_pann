@@ -11,10 +11,7 @@ function pickRandomSeries(excludeId?: string): string {
   return available[Math.floor(Math.random() * available.length)].id;
 }
 
-export default function App() {
-  const params = new URLSearchParams(window.location.search);
-  if (params.get('page') === 'main') return <Main />;
-
+function PlayerApp() {
   const [seriesId, setSeriesId] = useState<string | null>(null);
   const [epIdx, setEpIdx] = useState(0);
   const [showBottomSheet, setShowBottomSheet] = useState(false);
@@ -95,4 +92,10 @@ export default function App() {
       </div>
     </>
   );
+}
+
+export default function App() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('page') === 'main') return <Main />;
+  return <PlayerApp />;
 }

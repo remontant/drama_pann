@@ -26,7 +26,6 @@ export function vndrCall(regionId: string) {
     `${new Date().getTime()}`;
   const img = new Image();
   img.src = src;
-  console.log(`[NDR click] pageId=${PAGE_ID} regionId=${regionId} → ${src}`);
 }
 
 function firePV(virtualUrl: string) {
@@ -34,7 +33,6 @@ function firePV(virtualUrl: string) {
   const src = `https://stat.nate.com/stat/mstat.tiff?cp_url=[${virtualUrl}]t=${dummy}`;
   const img = new Image();
   img.src = src;
-  console.log(`[NDR PV] url=${virtualUrl} → ${src}`);
 }
 
 export function firePagePV()  { firePV(PV_PAGE_URL); }
