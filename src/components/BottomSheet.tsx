@@ -354,7 +354,7 @@ export default function BottomSheet({
                 return (
                   <button
                     key={s.id}
-                    onClick={isCurrent ? undefined : () => { trackView(`/click/bottomsheet/series/${s.title}`, `시리즈 선택 ${s.title}`); vndrCall(NDR.TAB_OTHER); onSelectSeries(s.id); }}
+                    onClick={isCurrent ? undefined : () => { trackView(`/click/bottomsheet/series/${s.title}`, `시리즈 선택 ${s.title}`); vndrCall(NDR.TAB_OTHER); vndrCall(NDR.OTHER_SERIES_CLICK); onSelectSeries(s.id); }}
                     style={{
                       background: 'transparent',
                       border: 'none',

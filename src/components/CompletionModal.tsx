@@ -43,7 +43,7 @@ export default function CompletionModal({ seriesId, onOtherContent, onClose }: P
         }}
       >
         <button
-          onClick={() => { trackView('/click/completion/close', '완료 모달 닫기'); onOtherContent(); }}
+          onClick={() => { trackView('/click/completion/close', '완료 모달 닫기'); vndrCall(NDR.MODAL_PV); onOtherContent(); }}
           style={{
             position: 'absolute',
             top: 16,

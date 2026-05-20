@@ -250,7 +250,6 @@ export default function Player({
 
   const togglePause = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('[data-noprop]')) return;
-    vndrCall(NDR.PLAYER_TAP);
     setPaused((p) => !p);
   }, []);
 

@@ -15,8 +15,9 @@ export const NDR = {
   TAB_OTHER:      'STD08',
   SWIPE_PREV:     'STD09',
   SWIPE_NEXT:     'STD10',
-  OTHER_CONTENT:  'STD11',
-  MODAL_PV:       'STD12',
+  OTHER_CONTENT:       'STD11',
+  MODAL_PV:            'STD12',
+  OTHER_SERIES_CLICK:  'STD081',
 } as const;
 
 export function vndrCall(regionId: string) {

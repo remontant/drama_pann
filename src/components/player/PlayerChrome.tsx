@@ -3,6 +3,7 @@ import ProgressBar from '@/components/ProgressBar';
 import DramaBi from '@/components/DramaBi';
 import { Series } from '@/lib/data';
 import { trackView } from '@/lib/gtag';
+import { vndrCall, NDR } from '@/lib/ndr';
 
 interface Props {
   series: Series;
@@ -58,6 +59,7 @@ export default function PlayerChrome({ series, ep, progress, duration }: Props) 
           onClick={(e) => {
             e.stopPropagation();
             trackView('/click/player/close', '플레이어 닫기');
+            vndrCall(NDR.PLAYER_TAP);
             if (window.history.length <= 1) {
               window.close();
             } else {
@@ -142,7 +144,7 @@ export default function PlayerChrome({ series, ep, progress, duration }: Props) 
             flexShrink: 0,
           }}
         >
-          /{series.totalEp}화
+          / {series.totalEp}화
         </span>
       </div>
 
