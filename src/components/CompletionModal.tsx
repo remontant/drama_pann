@@ -43,7 +43,7 @@ export default function CompletionModal({ seriesId, onOtherContent, onClose }: P
         }}
       >
         <button
-          onClick={onClose}
+          onClick={() => { trackView('/click/completion/close', '완료 모달 닫기'); onOtherContent(); }}
           style={{
             position: 'absolute',
             top: 16,

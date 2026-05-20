@@ -56,10 +56,7 @@ export default function Feed({ seriesId, epIdx, onEpChange, onOpenBottomSheet, o
 
   const tryGoNext = () => {
     if (isLastEp) {
-      const duration = feed[epIdx]?.duration ?? 90;
-      if (activeProgressRef.current >= duration * 0.8) {
-        onShowCompletion();
-      }
+      onShowCompletion();
       return;
     }
     onEpChange(epIdx + 1);
@@ -75,7 +72,6 @@ export default function Feed({ seriesId, epIdx, onEpChange, onOpenBottomSheet, o
     if (touchStartY.current === null) return;
     let delta = e.targetTouches[0].clientY - touchStartY.current;
     if (epIdx === 0 && delta > 0) delta *= 0.3;
-    else if (isLastEp && delta < 0) delta *= 0.3;
     touchDelta.current = delta;
     if (containerRef.current) {
       containerRef.current.style.transform = `translateY(calc(-${epIdx * 100}% + ${delta}px))`;
