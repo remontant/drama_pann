@@ -96,6 +96,6 @@ function PlayerApp() {
 
 export default function App() {
   const params = new URLSearchParams(window.location.search);
-  if (params.get('page') === 'main') return <Main />;
+  if (params.get('page') === 'main' || window.location.hash === '#main') return <Main />;
   return <PlayerApp />;
 }
