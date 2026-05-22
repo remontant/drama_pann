@@ -87,6 +87,7 @@ export const SERIES: Series[] = [
       { ep: 5, title: '5화', duration: 90, videoUrl: 'https://youtu.be/W2o8_QJqTdc?si=SOUKQu7KL0x-S2FJ' },
     ],
   },
+  /* to-ex 비노출 처리
   {
     id: 'to-ex',
     title: 'To.엑스',
@@ -105,6 +106,7 @@ export const SERIES: Series[] = [
       { ep: 5, title: '5화', duration: 90, videoUrl: 'https://youtu.be/7K1IWjETN4w?si=Duktgn_KozQDvlRm' },
     ],
   },
+  */
   {
     id: 'divorce-play',
     title: '이혼하고 나랑 놀래?',
