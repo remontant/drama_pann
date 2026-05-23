@@ -49,8 +49,67 @@ export default function BottomSheet({
   }, []);
 
   const sheetRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const dragStartY = useRef<number | null>(null);
   const dragDelta = useRef<number>(0);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  // 콘텐츠 영역 터치 처리:
+  // - touchStart 시점에 scrollTop으로 모드 결정 (이후 변경 없음 → 끊김 방지)
+  // - scrollTop=0 이면 → 이 터치 전체를 시트 드래그로 처리
+  // - scrollTop>0 이면 → 네이티브 스크롤에 완전히 위임
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    let startY = 0;
+    let isDragMode = false;
+
+    const onStart = (e: TouchEvent) => {
+      startY = e.targetTouches[0].clientY;
+      isDragMode = el.scrollTop <= 0;
+      if (isDragMode) {
+        dragStartY.current = startY;
+        dragDelta.current = 0;
+      }
+    };
+
+    const onMove = (e: TouchEvent) => {
+      if (!isDragMode) return;
+      const dy = e.targetTouches[0].clientY - startY;
+      if (dy <= 0) return; // 위 스와이프는 무시 (네이티브 스크롤)
+      e.preventDefault();
+      dragDelta.current = dy;
+      if (sheetRef.current) {
+        sheetRef.current.style.transition = 'none';
+        sheetRef.current.style.transform = `translateY(${dy}px)`;
+      }
+    };
+
+    const onEnd = () => {
+      if (!isDragMode) return;
+      if (dragDelta.current > 120) {
+        onCloseRef.current();
+      } else if (sheetRef.current) {
+        sheetRef.current.style.transition = 'transform 300ms cubic-bezier(0.22, 1, 0.36, 1)';
+        sheetRef.current.style.transform = 'translateY(0)';
+      }
+      dragStartY.current = null;
+      dragDelta.current = 0;
+      isDragMode = false;
+    };
+
+    el.addEventListener('touchstart', onStart, { passive: true });
+    el.addEventListener('touchmove', onMove, { passive: false });
+    el.addEventListener('touchend', onEnd, { passive: true });
+
+    return () => {
+      el.removeEventListener('touchstart', onStart);
+      el.removeEventListener('touchmove', onMove);
+      el.removeEventListener('touchend', onEnd);
+    };
+  }, []);
 
   const availableCount = series.episodes.length;
   const allEpisodes = Array.from({ length: series.totalEp }, (_, i) => ({
@@ -190,8 +249,8 @@ export default function BottomSheet({
           </div>
         </div>
 
-        {/* Tab content — touch-action:pan-y로 네이티브 스크롤, overscroll-behavior:contain으로 배경 전파 차단 */}
-        <div style={{ overflowY: 'auto', flex: 1, padding: '16px 20px 0', touchAction: 'pan-y', overscrollBehavior: 'contain' }}>
+        {/* Tab content — scrollTop=0 + 아래스와이프는 useEffect 핸들러가 시트 드래그로 위임 */}
+        <div ref={scrollRef} style={{ overflowY: 'auto', flex: 1, padding: '16px 20px 0', overscrollBehavior: 'contain' }}>
           {activeTab === 'episodes' ? (
             <>
               {/* Series title */}
