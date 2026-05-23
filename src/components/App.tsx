@@ -52,12 +52,12 @@ function PlayerApp() {
         DRAMA PANN <span style={{ opacity: 0.4 }}>·</span> 멈출 수 없는 엔딩, 판은 이미 시작됐다
       </div>
       <div className="side-text side-text-right">
-        2026 <span style={{ opacity: 0.4 }}>·</span> VERTICAL CINEMA
+        2026 <span style={{ opacity: 0.4 }}>·</span> VERTICAL DRAMA
       </div>
       <div
         style={{
           width: '100%',
-          maxWidth: 690,
+          maxWidth: 650,
           margin: '0 auto',
           minHeight: '100dvh',
           position: 'relative',

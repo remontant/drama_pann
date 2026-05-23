@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { List, Mute, Volume, Heart } from '@/components/Icons';
+import { List, Mute, Volume } from '@/components/Icons';
 import { FeedEntry, getSeries } from '@/lib/data';
 import { trackView } from '@/lib/gtag';
 import { vndrCall, NDR } from '@/lib/ndr';
@@ -86,34 +86,6 @@ export default function Player({
   const [realDuration, setRealDuration] = useState(entry.duration ?? 90);
   const [paused, setPaused] = useState(false);
   const [isReady, setIsReady] = useState(false);
-
-  interface FloatingHeart {
-    id: number;
-    size: number;
-    color: string;
-    dxMid: number;
-    dxEnd: number;
-    rot: number;
-    duration: number;
-  }
-  const [floatingHearts, setFloatingHearts] = useState<FloatingHeart[]>([]);
-  const HEART_COLORS = ['#ff2d55', '#ff6b8a', '#ff4f7b', '#ff1f5e', '#e5455a', '#ff5c8a'];
-
-  const onHeartPress = useCallback(() => {
-    trackView('/click/heart', '하트 버튼');
-    vndrCall(NDR.HEART);
-    const heart: FloatingHeart = {
-      id: Date.now() + Math.random(),
-      size: 18 + Math.floor(Math.random() * 14),
-      color: HEART_COLORS[Math.floor(Math.random() * HEART_COLORS.length)],
-      dxMid: (Math.random() - 0.5) * 36,
-      dxEnd: (Math.random() - 0.5) * 72,
-      rot: (Math.random() - 0.5) * 30,
-      duration: 1100 + Math.random() * 500,
-    };
-    setFloatingHearts((prev) => [...prev, heart]);
-    setTimeout(() => setFloatingHearts((prev) => prev.filter((h) => h.id !== heart.id)), heart.duration + 100);
-  }, []);
 
   const ytPlayer = useRef<any>(null);
   const ytReadyRef = useRef(false);
@@ -310,28 +282,6 @@ export default function Player({
       )}
 
 
-      {/* 플로팅 하트 오버레이 */}
-      <div style={{ position: 'absolute', inset: 0, zIndex: 5, pointerEvents: 'none' }}>
-        {floatingHearts.map((heart) => (
-          <div
-            key={heart.id}
-            style={{
-              position: 'absolute',
-              bottom: 273,
-              right: 14 + 23 - heart.size / 2,
-              width: heart.size,
-              height: heart.size,
-              animation: `floatHeart ${heart.duration}ms ease-out forwards`,
-              '--dx-mid': `${heart.dxMid}px`,
-              '--dx-end': `${heart.dxEnd}px`,
-              '--rot': `${heart.rot}deg`,
-            } as React.CSSProperties}
-          >
-            <Heart size={heart.size} fill={heart.color} strokeWidth={0} />
-          </div>
-        ))}
-      </div>
-
       {/* 우측 버튼 레일 */}
       <div
         data-noprop="true"
@@ -341,9 +291,6 @@ export default function Player({
           display: 'flex', flexDirection: 'column', gap: 20, alignItems: 'center',
         }}
       >
-        {/* <RailButton onClick={onHeartPress}>
-          <Heart size={22} strokeWidth={1.75} />
-        </RailButton> */}
         <RailButton onClick={() => { trackView(isMuted ? '/click/mute/off' : '/click/mute/on', '음소거 토글'); vndrCall(NDR.MUTE); onToggleMute(); }}>
           {isMuted ? <Mute size={22} strokeWidth={1.75} /> : <Volume size={22} strokeWidth={1.75} />}
         </RailButton>
