@@ -83,7 +83,6 @@ export default function Player({
   onDurationChange,
 }: Props) {
   const series = getSeries(entry.seriesId)!;
-  const [progress, setProgress] = useState(0);
   const [realDuration, setRealDuration] = useState(entry.duration ?? 90);
   const [paused, setPaused] = useState(false);
   const [isReady, setIsReady] = useState(false);
@@ -240,7 +239,6 @@ export default function Player({
 
   useEffect(() => {
     if (!active) {
-      setProgress(0);
       setPaused(false);
       setIsReady(false);
       try { ytPlayer.current?.seekTo(0, false); } catch {}
@@ -258,7 +256,7 @@ export default function Player({
       try {
         const ct: number = p.getCurrentTime();
         const dur: number = p.getDuration();
-        if (ct >= 0) { setProgress(ct); onProgressChangeRef.current?.(ct); }
+        if (ct >= 0) { onProgressChangeRef.current?.(ct); }
         if (dur > 0) { setRealDuration(dur); onDurationChangeRef.current?.(dur); }
       } catch {}
     }, 500);
