@@ -180,7 +180,6 @@ export default function BottomSheet({
                   color: activeTab === tab ? '#fff' : 'rgba(255,255,255,0.4)',
                   fontSize: 14,
                   fontWeight: activeTab === tab ? 600 : 400,
-                  fontFamily: 'var(--font-sans)',
                   letterSpacing: '-0.3px',
                   cursor: 'pointer',
                 }}
@@ -204,7 +203,6 @@ export default function BottomSheet({
                   marginBottom: 14,
                   padding: '0 4px',
                   letterSpacing: '-0.5px',
-                  fontFamily: 'var(--font-sans)',
                 }}
               >
                 {series.title}{' '}

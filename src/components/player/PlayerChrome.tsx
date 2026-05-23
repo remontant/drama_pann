@@ -103,7 +103,6 @@ export default function PlayerChrome({ series, ep, progress, duration }: Props) 
       >
         <span
           style={{
-            fontFamily: 'var(--font-sans)',
             fontSize: 17,
             fontWeight: 600,
             lineHeight: '24px',
@@ -120,7 +119,6 @@ export default function PlayerChrome({ series, ep, progress, duration }: Props) 
         </span>
         <span
           style={{
-            fontFamily: 'var(--font-sans)',
             fontSize: 15,
             fontWeight: 600,
             lineHeight: '20px',
@@ -134,7 +132,6 @@ export default function PlayerChrome({ series, ep, progress, duration }: Props) 
         </span>
         <span
           style={{
-            fontFamily: 'var(--font-sans)',
             fontSize: 15,
             fontWeight: 400,
             lineHeight: '20px',

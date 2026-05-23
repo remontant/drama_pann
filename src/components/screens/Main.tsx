@@ -10,7 +10,6 @@ export default function Main() {
         background: '#0e0e0e',
         color: '#fff',
         padding: '40px 24px',
-        fontFamily: 'var(--font-sans)',
       }}
     >
       <div style={{ maxWidth: 400, margin: '0 auto' }}>

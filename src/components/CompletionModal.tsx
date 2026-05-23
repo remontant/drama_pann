@@ -70,7 +70,6 @@ export default function CompletionModal({ seriesId, onOtherContent, onClose }: P
             fontSize: 18,
             fontWeight: 700,
             color: '#fff',
-            fontFamily: 'var(--font-sans)',
             letterSpacing: '-0.5px',
             lineHeight: '26px',
             marginBottom: 14,
@@ -83,7 +82,6 @@ export default function CompletionModal({ seriesId, onOtherContent, onClose }: P
           style={{
             fontSize: 14,
             color: 'rgba(255,255,255,0.5)',
-            fontFamily: 'var(--font-sans)',
             lineHeight: '22px',
             letterSpacing: '-0.3px',
             marginBottom: 28,
@@ -107,7 +105,6 @@ export default function CompletionModal({ seriesId, onOtherContent, onClose }: P
             color: '#fff',
             fontSize: 16,
             fontWeight: 700,
-            fontFamily: 'var(--font-sans)',
             letterSpacing: '-0.3px',
             cursor: 'pointer',
           }}
