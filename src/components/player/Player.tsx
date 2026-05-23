@@ -95,11 +95,13 @@ export default function Player({
 
   const activeRef = useRef(active);
   const isMutedRef = useRef(isMuted);
+  const pausedRef = useRef(paused);
   const onEndedRef = useRef(onEnded);
   const onProgressChangeRef = useRef(onProgressChange);
   const onDurationChangeRef = useRef(onDurationChange);
   activeRef.current = active;
   isMutedRef.current = isMuted;
+  pausedRef.current = paused;
   onEndedRef.current = onEnded;
   onProgressChangeRef.current = onProgressChange;
   onDurationChangeRef.current = onDurationChange;
@@ -195,7 +197,7 @@ export default function Player({
         // 모바일 gesture 타임아웃 + YouTube 느린 초기화 대비 다단계 재시도
         [600, 2500, 5000].forEach((delay) => {
           timers.push(setTimeout(() => {
-            try { if (p.getPlayerState?.() !== 1) p.playVideo(); } catch {}
+            try { if (p.getPlayerState?.() !== 1 && !pausedRef.current) p.playVideo(); } catch {}
           }, delay));
         });
       } else {
@@ -248,8 +250,13 @@ export default function Player({
 
   const togglePause = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('[data-noprop]')) return;
-    setPaused((p) => !p);
-  }, []);
+    const willBePaused = !paused;
+    // iOS gesture chain에서 직접 호출 — useEffect 비동기 경로 대신 동기 호출로 autoplay 차단 우회
+    try {
+      willBePaused ? ytPlayer.current?.pauseVideo() : ytPlayer.current?.playVideo();
+    } catch {}
+    setPaused(willBePaused);
+  }, [paused]);
 
   return (
     <div
@@ -346,7 +353,22 @@ export default function Player({
           display: 'flex', flexDirection: 'column', gap: 20, alignItems: 'center',
         }}
       >
-        <RailButton onClick={() => { trackView(isMuted ? '/click/mute/off' : '/click/mute/on', '음소거 토글'); vndrCall(NDR.MUTE); onToggleMute(); }}>
+        <RailButton onClick={() => {
+          trackView(isMuted ? '/click/mute/off' : '/click/mute/on', '음소거 토글');
+          vndrCall(NDR.MUTE);
+          // iOS gesture chain: mute/unmute 직접 호출 + 멈춰있으면 playVideo 재시도
+          try {
+            if (isMuted) {
+              ytPlayer.current?.unMute();
+              if (ytPlayer.current?.getPlayerState?.() !== 1 && !pausedRef.current) {
+                ytPlayer.current?.playVideo();
+              }
+            } else {
+              ytPlayer.current?.mute();
+            }
+          } catch {}
+          onToggleMute();
+        }}>
           {isMuted ? <Mute size={22} strokeWidth={1.75} /> : <Volume size={22} strokeWidth={1.75} />}
         </RailButton>
         <RailButton onClick={() => { trackView('/click/bottomsheet/open', '회차목록 열기'); vndrCall(NDR.EPISODE_LIST); onOpenBottomSheet(); }}>
