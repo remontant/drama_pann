@@ -45,12 +45,16 @@ export default function Feed({ seriesId, epIdx, onEpChange, onOpenBottomSheet, o
     setActiveDuration(currentEntry?.duration ?? 90);
   }, [epIdx, seriesId]);
 
+  const prevSeriesRef = useRef(seriesId);
   useEffect(() => {
+    const seriesChanged = prevSeriesRef.current !== seriesId;
+    prevSeriesRef.current = seriesId;
     if (containerRef.current) {
-      containerRef.current.style.transition = 'transform 400ms cubic-bezier(0.22, 1, 0.36, 1)';
+      // 시리즈가 바뀐 경우 트랜지션 없이 즉시 위치 리셋 (슬라이드 인 모션 방지)
+      containerRef.current.style.transition = seriesChanged ? 'none' : 'transform 400ms cubic-bezier(0.22, 1, 0.36, 1)';
       containerRef.current.style.transform = `translateY(-${epIdx * 100}%)`;
     }
-  }, [epIdx]);
+  }, [epIdx, seriesId]);
 
   const isLastEp = epIdx === feed.length - 1;
 
@@ -72,6 +76,7 @@ export default function Feed({ seriesId, epIdx, onEpChange, onOpenBottomSheet, o
     if (touchStartY.current === null) return;
     let delta = e.targetTouches[0].clientY - touchStartY.current;
     if (epIdx === 0 && delta > 0) delta *= 0.3;
+    if (isLastEp && delta < 0) delta *= 0.3;
     touchDelta.current = delta;
     if (containerRef.current) {
       containerRef.current.style.transform = `translateY(calc(-${epIdx * 100}% + ${delta}px))`;
@@ -81,13 +86,16 @@ export default function Feed({ seriesId, epIdx, onEpChange, onOpenBottomSheet, o
   const onTouchEnd = () => {
     if (touchStartY.current === null) return;
     const delta = touchDelta.current;
+    const goingNext = delta < -50;
 
     if (containerRef.current) {
-      containerRef.current.style.transition = 'transform 400ms cubic-bezier(0.22, 1, 0.36, 1)';
+      // 마지막 화에서 위로 플리킹 → 모달만 띄우므로 튕겨 돌아오는 모션 없이 즉시 리셋
+      const skipAnim = goingNext && isLastEp;
+      containerRef.current.style.transition = skipAnim ? 'none' : 'transform 400ms cubic-bezier(0.22, 1, 0.36, 1)';
       containerRef.current.style.transform = `translateY(-${epIdx * 100}%)`;
     }
 
-    if (delta < -50) {
+    if (goingNext) {
       trackView('/click/feed/swipe-next', '다음 화 스와이프');
       vndrCall(NDR.SWIPE_NEXT);
       tryGoNext();
