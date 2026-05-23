@@ -20,3 +20,7 @@ dist/
 tsconfig.tsbuildinfo
 
 .vercel
+
+# claude code
+.claude/
+memory/
