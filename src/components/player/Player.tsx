@@ -213,7 +213,7 @@ export default function Player({
     if (!active) {
       setPaused(false);
       setIsReady(false);
-      try { ytPlayer.current?.seekTo(0, false); } catch {}
+      try { ytPlayer.current?.seekTo(0, true); } catch {}
     } else if (ytReadyRef.current) {
       // 이미 로드된 플레이어로 돌아왔을 때 thumbnail 복원
       setIsReady(true);
