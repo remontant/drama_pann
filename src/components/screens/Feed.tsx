@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { getFeedFor, getSeries } from '@/lib/data';
-import Player from '@/components/player/Player';
+import Player, { PlayerHandle } from '@/components/player/Player';
 import PlayerChrome from '@/components/player/PlayerChrome';
 import { trackView } from '@/lib/gtag';
 import { vndrCall, NDR } from '@/lib/ndr';
@@ -26,6 +26,8 @@ export default function Feed({ seriesId, epIdx, onEpChange, onOpenBottomSheet, o
   const touchDelta = useRef<number>(0);
   const lastWheelTime = useRef<number>(0);
   const activeProgressRef = useRef<number>(0);
+  // gesture chain 안에서 다음/이전 Player의 playVideo()를 직접 호출하기 위한 핸들 맵
+  const playerHandlesRef = useRef<Record<string, PlayerHandle | null>>({});
 
   const series = getSeries(seriesId)!;
   const currentEntry = feed[epIdx];
@@ -98,10 +100,13 @@ export default function Feed({ seriesId, epIdx, onEpChange, onOpenBottomSheet, o
     if (goingNext) {
       trackView('/click/feed/swipe-next', '다음 화 스와이프');
       vndrCall(NDR.SWIPE_NEXT);
+      // iOS gesture chain 안에서 직접 play() 호출 — useEffect 비동기 경로 우회
+      if (!isLastEp) playerHandlesRef.current[feed[epIdx + 1]?.id]?.play();
       tryGoNext();
     } else if (delta > 50 && epIdx > 0) {
       trackView('/click/feed/swipe-prev', '이전 화 스와이프');
       vndrCall(NDR.SWIPE_PREV);
+      playerHandlesRef.current[feed[epIdx - 1]?.id]?.play();
       onEpChange(epIdx - 1);
     }
 
@@ -113,9 +118,11 @@ export default function Feed({ seriesId, epIdx, onEpChange, onOpenBottomSheet, o
     const now = Date.now();
     if (now - lastWheelTime.current < 800) return;
     if (e.deltaY > 30) {
+      if (!isLastEp) playerHandlesRef.current[feed[epIdx + 1]?.id]?.play();
       tryGoNext();
       lastWheelTime.current = now;
     } else if (e.deltaY < -30 && epIdx > 0) {
+      playerHandlesRef.current[feed[epIdx - 1]?.id]?.play();
       onEpChange(epIdx - 1);
       lastWheelTime.current = now;
     }
@@ -156,6 +163,7 @@ export default function Feed({ seriesId, epIdx, onEpChange, onOpenBottomSheet, o
               >
                 {isNear && (
                   <Player
+                    ref={(handle) => { playerHandlesRef.current[entry.id] = handle; }}
                     entry={entry}
                     active={i === epIdx}
                     isMuted={isMuted}

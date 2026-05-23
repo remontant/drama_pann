@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
 import { List, Mute, Volume } from '@/components/Icons';
 import { FeedEntry, getSeries } from '@/lib/data';
 import { trackView } from '@/lib/gtag';
@@ -31,6 +31,10 @@ function extractYoutubeId(url: string) {
     /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|shorts\/|watch\?v=|\?v=))([\w-]{11})/
   );
   return match ? match[1] : null;
+}
+
+export interface PlayerHandle {
+  play: () => void;
 }
 
 interface Props {
@@ -72,7 +76,7 @@ function RailButton({ children, onClick }: { children: React.ReactNode; onClick?
   );
 }
 
-export default function Player({
+const Player = forwardRef<PlayerHandle, Props>(function Player({
   entry,
   active,
   isMuted,
@@ -81,7 +85,7 @@ export default function Player({
   onEnded,
   onProgressChange,
   onDurationChange,
-}: Props) {
+}: Props, ref) {
   const series = getSeries(entry.seriesId)!;
   const [realDuration, setRealDuration] = useState(entry.duration ?? 90);
   const [paused, setPaused] = useState(false);
@@ -92,6 +96,11 @@ export default function Player({
   const ytPlayer = useRef<any>(null);
   const ytReadyRef = useRef(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // Feed의 gesture chain(onTouchEnd)에서 직접 호출 가능하도록 play() 노출
+  useImperativeHandle(ref, () => ({
+    play: () => { try { ytPlayer.current?.playVideo(); } catch {} },
+  }), []);
 
   const activeRef = useRef(active);
   const isMutedRef = useRef(isMuted);
@@ -377,4 +386,6 @@ export default function Player({
       </div>
     </div>
   );
-}
+});
+
+export default Player;
