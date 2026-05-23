@@ -86,6 +86,8 @@ export default function Player({
   const [realDuration, setRealDuration] = useState(entry.duration ?? 90);
   const [paused, setPaused] = useState(false);
   const [isReady, setIsReady] = useState(false);
+  const [isError, setIsError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   const ytPlayer = useRef<any>(null);
   const ytReadyRef = useRef(false);
@@ -146,6 +148,7 @@ export default function Player({
               }
               ytReadyRef.current = true;
               setIsReady(true);
+              setIsError(false);
             },
             onStateChange: (e: any) => {
               if (cancelled) return;
@@ -162,6 +165,7 @@ export default function Player({
                 150: '퍼가기 차단된 영상',
               };
               console.warn('[Player] YouTube 오류:', e.data, msg[e.data] ?? '알 수 없음');
+              if (!cancelled) setIsError(true);
             },
           },
         });
@@ -179,26 +183,26 @@ export default function Player({
       if (placeholder.isConnected) placeholder.remove();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [videoId]);
+  }, [videoId, retryCount]);
 
   useEffect(() => {
     const p = ytPlayer.current;
     if (!p?.playVideo) return;
-    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    const timers: ReturnType<typeof setTimeout>[] = [];
     try {
       if (active && !paused) {
         p.playVideo();
-        // 모바일 브라우저가 gesture 타임아웃으로 playVideo()를 무시하는 경우 대비 재시도
-        retryTimer = setTimeout(() => {
-          try {
-            if (p.getPlayerState?.() !== 1) p.playVideo();
-          } catch {}
-        }, 600);
+        // 모바일 gesture 타임아웃 + YouTube 느린 초기화 대비 다단계 재시도
+        [600, 2500, 5000].forEach((delay) => {
+          timers.push(setTimeout(() => {
+            try { if (p.getPlayerState?.() !== 1) p.playVideo(); } catch {}
+          }, delay));
+        });
       } else {
         p.pauseVideo();
       }
     } catch {}
-    return () => { if (retryTimer) clearTimeout(retryTimer); };
+    return () => timers.forEach(clearTimeout);
   }, [active, paused]);
 
   useEffect(() => {
@@ -213,12 +217,19 @@ export default function Player({
     if (!active) {
       setPaused(false);
       setIsReady(false);
+      setIsError(false);
       try { ytPlayer.current?.seekTo(0, true); } catch {}
     } else if (ytReadyRef.current) {
-      // 이미 로드된 플레이어로 돌아왔을 때 thumbnail 복원
       setIsReady(true);
     }
   }, [active]);
+
+  // active 상태에서 15초 내 로딩 완료 안 되면 에러 처리
+  useEffect(() => {
+    if (!active || isReady || isError) return;
+    const timer = setTimeout(() => setIsError(true), 15000);
+    return () => clearTimeout(timer);
+  }, [active, isReady, isError]);
 
   useEffect(() => {
     if (!active || paused) return;
@@ -281,6 +292,50 @@ export default function Player({
         </div>
       )}
 
+
+      {/* 에러 오버레이 — 로딩 타임아웃 또는 YouTube 에러 시 */}
+      {isError && active && (
+        <div
+          data-noprop="true"
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 6,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 16,
+            background: 'rgba(0,0,0,0.75)',
+          }}
+        >
+          <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', letterSpacing: '-0.3px' }}>
+            영상을 불러올 수 없습니다
+          </span>
+          <button
+            onClick={() => {
+              setIsError(false);
+              setIsReady(false);
+              ytReadyRef.current = false;
+              setRetryCount((c) => c + 1);
+            }}
+            style={{
+              padding: '10px 24px',
+              borderRadius: 8,
+              background: 'var(--plot-red)',
+              border: 'none',
+              color: '#fff',
+              fontSize: 14,
+              fontWeight: 600,
+              letterSpacing: '-0.3px',
+              cursor: 'pointer',
+            }}
+          >
+            다시 시도
+          </button>
+        </div>
+      )}
 
       {/* 우측 버튼 레일 */}
       <div
