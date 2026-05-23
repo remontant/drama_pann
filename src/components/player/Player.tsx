@@ -123,9 +123,13 @@ export default function Player({
   const activeRef = useRef(active);
   const isMutedRef = useRef(isMuted);
   const onEndedRef = useRef(onEnded);
+  const onProgressChangeRef = useRef(onProgressChange);
+  const onDurationChangeRef = useRef(onDurationChange);
   activeRef.current = active;
   isMutedRef.current = isMuted;
   onEndedRef.current = onEnded;
+  onProgressChangeRef.current = onProgressChange;
+  onDurationChangeRef.current = onDurationChange;
 
   const videoUrl = entry.videoUrl || 'https://www.youtube.com/watch?v=aqz-KE-bpKQ';
   const videoId = extractYoutubeId(videoUrl);
@@ -173,6 +177,7 @@ export default function Player({
               setIsReady(true);
             },
             onStateChange: (e: any) => {
+              if (cancelled) return;
               if (e.data === 0 && activeRef.current) {
                 setTimeout(() => onEndedRef.current?.(), 0);
               }
@@ -208,9 +213,21 @@ export default function Player({
   useEffect(() => {
     const p = ytPlayer.current;
     if (!p?.playVideo) return;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
     try {
-      active && !paused ? p.playVideo() : p.pauseVideo();
+      if (active && !paused) {
+        p.playVideo();
+        // 모바일 브라우저가 gesture 타임아웃으로 playVideo()를 무시하는 경우 대비 재시도
+        retryTimer = setTimeout(() => {
+          try {
+            if (p.getPlayerState?.() !== 1) p.playVideo();
+          } catch {}
+        }, 600);
+      } else {
+        p.pauseVideo();
+      }
     } catch {}
+    return () => { if (retryTimer) clearTimeout(retryTimer); };
   }, [active, paused]);
 
   useEffect(() => {
@@ -226,7 +243,7 @@ export default function Player({
       setProgress(0);
       setPaused(false);
       setIsReady(false);
-      try { ytPlayer.current?.seekTo(0, true); } catch {}
+      try { ytPlayer.current?.seekTo(0, false); } catch {}
     } else if (ytReadyRef.current) {
       // 이미 로드된 플레이어로 돌아왔을 때 thumbnail 복원
       setIsReady(true);
@@ -241,12 +258,12 @@ export default function Player({
       try {
         const ct: number = p.getCurrentTime();
         const dur: number = p.getDuration();
-        if (ct >= 0) { setProgress(ct); onProgressChange?.(ct); }
-        if (dur > 0) { setRealDuration(dur); onDurationChange?.(dur); }
+        if (ct >= 0) { setProgress(ct); onProgressChangeRef.current?.(ct); }
+        if (dur > 0) { setRealDuration(dur); onDurationChangeRef.current?.(dur); }
       } catch {}
     }, 500);
     return () => clearInterval(interval);
-  }, [active, paused, onProgressChange]);
+  }, [active, paused]); // onProgressChange/onDurationChange는 ref로 접근해 deps 제외
 
   const togglePause = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('[data-noprop]')) return;

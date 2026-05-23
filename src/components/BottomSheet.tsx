@@ -135,59 +135,64 @@ export default function BottomSheet({
           transition: 'transform 300ms cubic-bezier(0.22, 1, 0.36, 1)',
         }}
         onClick={(e) => e.stopPropagation()}
-        onTouchStart={onDragStart}
-        onTouchMove={onDragMove}
-        onTouchEnd={onDragEnd}
       >
-        {/* Drag handle */}
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px' }}>
+        {/* 드래그 존 — 핸들 + 탭만 드래그 가능, touch-action:none으로 브라우저 개입 차단 */}
+        <div
+          onTouchStart={onDragStart}
+          onTouchMove={onDragMove}
+          onTouchEnd={onDragEnd}
+          style={{ touchAction: 'none' }}
+        >
+          {/* Drag handle */}
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px' }}>
+            <div
+              style={{
+                width: 36,
+                height: 4,
+                borderRadius: 2,
+                background: 'rgba(255,255,255,0.25)',
+              }}
+            />
+          </div>
+
+          {/* Tabs */}
           <div
             style={{
-              width: 36,
-              height: 4,
-              borderRadius: 2,
-              background: 'rgba(255,255,255,0.25)',
+              display: 'flex',
+              borderBottom: '1px solid rgba(255,255,255,0.08)',
+              //padding: '0 20px',
             }}
-          />
+          >
+            {(['episodes', 'other'] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => {
+                  setActiveTab(tab);
+                  vndrCall(tab === 'episodes' ? NDR.TAB_EPISODES : NDR.TAB_OTHER);
+                }}
+                style={{
+                  flex: 1,
+                  padding: '14px 0',
+                  background: 'transparent',
+                  border: 'none',
+                  borderBottom: activeTab === tab ? '1px solid var(--plot-red)' : '1px solid transparent',
+                  marginBottom: -1,
+                  color: activeTab === tab ? '#fff' : 'rgba(255,255,255,0.4)',
+                  fontSize: 14,
+                  fontWeight: activeTab === tab ? 600 : 400,
+                  fontFamily: 'var(--font-sans)',
+                  letterSpacing: '-0.3px',
+                  cursor: 'pointer',
+                }}
+              >
+                {tab === 'episodes' ? '회차정보' : '다른 콘텐츠'}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Tabs */}
-        <div
-          style={{
-            display: 'flex',
-            borderBottom: '1px solid rgba(255,255,255,0.08)',
-            //padding: '0 20px',
-          }}
-        >
-          {(['episodes', 'other'] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => {
-                setActiveTab(tab);
-                vndrCall(tab === 'episodes' ? NDR.TAB_EPISODES : NDR.TAB_OTHER);
-              }}
-              style={{
-                flex: 1,
-                padding: '14px 0',
-                background: 'transparent',
-                border: 'none',
-                borderBottom: activeTab === tab ? '1px solid var(--plot-red)' : '1px solid transparent',
-                marginBottom: -1,
-                color: activeTab === tab ? '#fff' : 'rgba(255,255,255,0.4)',
-                fontSize: 14,
-                fontWeight: activeTab === tab ? 600 : 400,
-                fontFamily: 'var(--font-sans)',
-                letterSpacing: '-0.3px',
-                cursor: 'pointer',
-              }}
-            >
-              {tab === 'episodes' ? '회차정보' : '다른 콘텐츠'}
-            </button>
-          ))}
-        </div>
-
-        {/* Tab content */}
-        <div style={{ overflowY: 'auto', flex: 1, padding: '16px 20px 0' }}>
+        {/* Tab content — touch-action:pan-y로 네이티브 스크롤, overscroll-behavior:contain으로 배경 전파 차단 */}
+        <div style={{ overflowY: 'auto', flex: 1, padding: '16px 20px 0', touchAction: 'pan-y', overscrollBehavior: 'contain' }}>
           {activeTab === 'episodes' ? (
             <>
               {/* Series title */}
