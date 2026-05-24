@@ -86,11 +86,9 @@ const Player = forwardRef<PlayerHandle, Props>(function Player({
   onDurationChange,
 }: Props, ref) {
   const series = getSeries(entry.seriesId)!;
-  const [realDuration, setRealDuration] = useState(entry.duration ?? 90);
   const [paused, setPaused] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [isError, setIsError] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
 
   const ytPlayer = useRef<any>(null);
   const ytReadyRef = useRef(false);
@@ -164,8 +162,6 @@ const Player = forwardRef<PlayerHandle, Props>(function Player({
               if (cancelled) return;
               if (e.data === 1) {
                 setIsReady(true);
-              } else if (e.data === 3) {
-                setIsReady(false); // 버퍼링 중일 때 썸네일 노출
               }
               if (e.data === 0) {
                 setTimeout(() => onEndedRef.current?.(), 0);
@@ -273,7 +269,7 @@ const Player = forwardRef<PlayerHandle, Props>(function Player({
         const ct: number = p.getCurrentTime();
         const dur: number = p.getDuration();
         if (ct >= 0) onProgressChangeRef.current?.(ct);
-        if (dur > 0) { setRealDuration(dur); onDurationChangeRef.current?.(dur); }
+        if (dur > 0) { onDurationChangeRef.current?.(dur); }
       } catch {}
     }, 500);
     return () => clearInterval(interval);
@@ -337,7 +333,6 @@ const Player = forwardRef<PlayerHandle, Props>(function Player({
               setIsError(false);
               setIsReady(false);
               ytReadyRef.current = false;
-              setRetryCount((c) => c + 1);
             }}
             style={{
               padding: '10px 24px', borderRadius: 8, background: 'var(--plot-red)',
