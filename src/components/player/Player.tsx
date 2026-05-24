@@ -35,11 +35,11 @@ function extractYoutubeId(url: string) {
 
 export interface PlayerHandle {
   play: () => void;
+  primeAudio: () => void; // 현재 no-op — 향후 활용 가능하도록 인터페이스 유지
 }
 
 interface Props {
   entry: FeedEntry;
-  active: boolean;
   isMuted: boolean;
   onToggleMute: () => void;
   onOpenBottomSheet: () => void;
@@ -78,7 +78,6 @@ function RailButton({ children, onClick }: { children: React.ReactNode; onClick?
 
 const Player = forwardRef<PlayerHandle, Props>(function Player({
   entry,
-  active,
   isMuted,
   onToggleMute,
   onOpenBottomSheet,
@@ -97,18 +96,11 @@ const Player = forwardRef<PlayerHandle, Props>(function Player({
   const ytReadyRef = useRef(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  // Feed의 gesture chain(onTouchEnd)에서 직접 호출 가능하도록 play() 노출
-  useImperativeHandle(ref, () => ({
-    play: () => { try { ytPlayer.current?.playVideo(); } catch {} },
-  }), []);
-
-  const activeRef = useRef(active);
   const isMutedRef = useRef(isMuted);
   const pausedRef = useRef(paused);
   const onEndedRef = useRef(onEnded);
   const onProgressChangeRef = useRef(onProgressChange);
   const onDurationChangeRef = useRef(onDurationChange);
-  activeRef.current = active;
   isMutedRef.current = isMuted;
   pausedRef.current = paused;
   onEndedRef.current = onEnded;
@@ -118,14 +110,26 @@ const Player = forwardRef<PlayerHandle, Props>(function Player({
   const videoUrl = entry.videoUrl || 'https://www.youtube.com/watch?v=aqz-KE-bpKQ';
   const videoId = extractYoutubeId(videoUrl);
 
-  useEffect(() => {
-    if (!videoId || !wrapperRef.current) return;
-    let cancelled = false;
+  useImperativeHandle(ref, () => ({
+    play: () => {
+      // gesture chain 안에서 호출됨
+      try {
+        if (!isMutedRef.current) {
+          // 음소거가 해제된 상태로 스와이프해서 넘어왔을 때,
+          // 브라우저 정책상 소리 있는 자동재생이 막히는 것을 방지하기 위해
+          // unMute()를 명시적으로 호출하여 사용자 제스처를 전달
+          ytPlayer.current?.unMute?.();
+        }
+        ytPlayer.current?.playVideo?.();
+      } catch {}
+    },
+    primeAudio: () => {},
+  }), []);
 
-    if (ytPlayer.current) {
-      try { ytPlayer.current.destroy(); } catch {}
-      ytPlayer.current = null;
-    }
+  // 1. Initialize Player ONCE
+  useEffect(() => {
+    if (!wrapperRef.current) return;
+    let cancelled = false;
 
     const placeholder = document.createElement('div');
     wrapperRef.current.appendChild(placeholder);
@@ -134,10 +138,10 @@ const Player = forwardRef<PlayerHandle, Props>(function Player({
       if (cancelled || !placeholder.isConnected) return;
       try {
         ytPlayer.current = new (window as any).YT.Player(placeholder, {
-          videoId,
+          videoId: extractYoutubeId(entry.videoUrl || ''),
           playerVars: {
             autoplay: 1,
-            mute: 1,
+            mute: isMutedRef.current ? 1 : 0,
             controls: 0,
             modestbranding: 1,
             playsinline: 1,
@@ -146,36 +150,29 @@ const Player = forwardRef<PlayerHandle, Props>(function Player({
           events: {
             onReady: (e: any) => {
               if (cancelled) return;
-              try {
-                e.target.getIframe().className = 'youtube-iframe-full';
-              } catch {}
-              const dur: number = e.target.getDuration();
-              if (dur > 0) { setRealDuration(dur); onDurationChange?.(dur); }
-              if (!isMutedRef.current) e.target.unMute();
-              if (activeRef.current) {
-                e.target.playVideo();
-              } else {
-                e.target.pauseVideo();
-              }
+              try { e.target.getIframe().className = 'youtube-iframe-full'; } catch {}
               ytReadyRef.current = true;
               setIsReady(true);
               setIsError(false);
+              
+              if (!isMutedRef.current) {
+                e.target.unMute();
+              }
+              e.target.playVideo();
             },
             onStateChange: (e: any) => {
               if (cancelled) return;
-              if (e.data === 0 && activeRef.current) {
+              if (e.data === 1) {
+                setIsReady(true);
+              } else if (e.data === 3) {
+                setIsReady(false); // 버퍼링 중일 때 썸네일 노출
+              }
+              if (e.data === 0) {
                 setTimeout(() => onEndedRef.current?.(), 0);
               }
             },
             onError: (e: any) => {
-              const msg: Record<number, string> = {
-                2: '잘못된 파라미터',
-                5: 'HTML5 플레이어 오류',
-                100: '영상 없음 또는 비공개',
-                101: '퍼가기 차단된 영상',
-                150: '퍼가기 차단된 영상',
-              };
-              console.warn('[Player] YouTube 오류:', e.data, msg[e.data] ?? '알 수 없음');
+              console.warn('[Player] YouTube 오류:', e.data);
               if (!cancelled) setIsError(true);
             },
           },
@@ -193,20 +190,40 @@ const Player = forwardRef<PlayerHandle, Props>(function Player({
       }
       if (placeholder.isConnected) placeholder.remove();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [videoId, retryCount]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only once on mount
+
+  // 2. Handle videoId changes
+  useEffect(() => {
+    if (!ytReadyRef.current || !ytPlayer.current) return;
+    const vid = extractYoutubeId(entry.videoUrl || '');
+    if (vid) {
+      setIsReady(false);
+      setIsError(false);
+      ytPlayer.current.loadVideoById(vid);
+      if (!isMutedRef.current) {
+        ytPlayer.current.unMute();
+      }
+      ytPlayer.current.playVideo();
+    }
+  }, [entry.videoUrl]);
 
   useEffect(() => {
     const p = ytPlayer.current;
     if (!p?.playVideo) return;
     const timers: ReturnType<typeof setTimeout>[] = [];
     try {
-      if (active && !paused) {
-        p.playVideo();
-        // 모바일 gesture 타임아웃 + YouTube 느린 초기화 대비 다단계 재시도
+      if (!paused) {
+        try {
+          const st = p.getPlayerState?.();
+          if (st !== 1 && st !== 3) p.playVideo();
+        } catch {}
         [600, 2500, 5000].forEach((delay) => {
           timers.push(setTimeout(() => {
-            try { if (p.getPlayerState?.() !== 1 && !pausedRef.current) p.playVideo(); } catch {}
+            try {
+              const currentSt = p.getPlayerState?.();
+              if (currentSt !== 1 && currentSt !== 3 && !pausedRef.current) p.playVideo();
+            } catch {}
           }, delay));
         });
       } else {
@@ -214,53 +231,57 @@ const Player = forwardRef<PlayerHandle, Props>(function Player({
       }
     } catch {}
     return () => timers.forEach(clearTimeout);
-  }, [active, paused]);
+  }, [paused]);
 
   useEffect(() => {
     const p = ytPlayer.current;
-    if (!p?.mute) return;
+    if (!p) return;
     try {
       isMuted ? p.mute() : p.unMute();
     } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMuted]);
 
   useEffect(() => {
-    if (!active) {
-      setPaused(false);
-      setIsReady(false);
-      setIsError(false);
-      try { ytPlayer.current?.seekTo(0, true); } catch {}
-    } else if (ytReadyRef.current) {
-      setIsReady(true);
-    }
-  }, [active]);
-
-  // active 상태에서 15초 내 로딩 완료 안 되면 에러 처리
-  useEffect(() => {
-    if (!active || isReady || isError) return;
+    if (isReady || isError) return;
     const timer = setTimeout(() => setIsError(true), 15000);
     return () => clearTimeout(timer);
-  }, [active, isReady, isError]);
+  }, [isReady, isError]);
+
+  // Stuck audio recovery
+  useEffect(() => {
+    if (isMuted) return;
+    const timer = setTimeout(() => {
+      try {
+        const p = ytPlayer.current;
+        if (p?.getPlayerState?.() === 3) {
+          console.warn(`[Player:${entry.ep}] audio 로딩 stuck — auto-mute fallback`);
+          p.mute();
+        }
+      } catch {}
+    }, 5000);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMuted, entry.videoUrl]);
 
   useEffect(() => {
-    if (!active || paused) return;
+    if (paused) return;
     const interval = setInterval(() => {
       const p = ytPlayer.current;
       if (!p?.getCurrentTime) return;
       try {
         const ct: number = p.getCurrentTime();
         const dur: number = p.getDuration();
-        if (ct >= 0) { onProgressChangeRef.current?.(ct); }
+        if (ct >= 0) onProgressChangeRef.current?.(ct);
         if (dur > 0) { setRealDuration(dur); onDurationChangeRef.current?.(dur); }
       } catch {}
     }, 500);
     return () => clearInterval(interval);
-  }, [active, paused]); // onProgressChange/onDurationChange는 ref로 접근해 deps 제외
+  }, [paused]);
 
   const togglePause = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('[data-noprop]')) return;
     const willBePaused = !paused;
-    // iOS gesture chain에서 직접 호출 — useEffect 비동기 경로 대신 동기 호출로 autoplay 차단 우회
     try {
       willBePaused ? ytPlayer.current?.pauseVideo() : ytPlayer.current?.playVideo();
     } catch {}
@@ -282,48 +303,30 @@ const Player = forwardRef<PlayerHandle, Props>(function Player({
       <div ref={wrapperRef} style={{ position: 'absolute', inset: 0, zIndex: 0 }} />
       <div style={{ position: 'absolute', inset: 0, zIndex: 1 }} />
 
-      {/* 썸네일 오버레이 — 플레이어 준비 전까지 검은 화면 대신 표시 */}
       {videoId && (
         <div
           style={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 2,
-            background: '#000',
-            pointerEvents: 'none',
-            opacity: isReady ? 0 : 1,
-            transition: 'opacity 400ms ease',
+            position: 'absolute', inset: 0, zIndex: 2,
+            background: '#000', pointerEvents: 'none',
+            opacity: isReady ? 0 : 1, transition: 'opacity 400ms ease',
           }}
         >
           <img
             src={`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`}
             alt=""
-            style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              opacity: 0.85,
-            }}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }}
           />
         </div>
       )}
 
-
-      {/* 에러 오버레이 — 로딩 타임아웃 또는 YouTube 에러 시 */}
-      {isError && active && (
+      {isError && (
         <div
           data-noprop="true"
           onClick={(e) => e.stopPropagation()}
           style={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 6,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 16,
-            background: 'rgba(0,0,0,0.75)',
+            position: 'absolute', inset: 0, zIndex: 6,
+            display: 'flex', flexDirection: 'column', alignItems: 'center',
+            justifyContent: 'center', gap: 16, background: 'rgba(0,0,0,0.75)',
           }}
         >
           <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', letterSpacing: '-0.3px' }}>
@@ -337,15 +340,9 @@ const Player = forwardRef<PlayerHandle, Props>(function Player({
               setRetryCount((c) => c + 1);
             }}
             style={{
-              padding: '10px 24px',
-              borderRadius: 8,
-              background: 'var(--plot-red)',
-              border: 'none',
-              color: '#fff',
-              fontSize: 14,
-              fontWeight: 600,
-              letterSpacing: '-0.3px',
-              cursor: 'pointer',
+              padding: '10px 24px', borderRadius: 8, background: 'var(--plot-red)',
+              border: 'none', color: '#fff', fontSize: 14, fontWeight: 600,
+              letterSpacing: '-0.3px', cursor: 'pointer',
             }}
           >
             다시 시도
@@ -353,7 +350,6 @@ const Player = forwardRef<PlayerHandle, Props>(function Player({
         </div>
       )}
 
-      {/* 우측 버튼 레일 */}
       <div
         data-noprop="true"
         onClick={(e) => e.stopPropagation()}
@@ -365,11 +361,13 @@ const Player = forwardRef<PlayerHandle, Props>(function Player({
         <RailButton onClick={() => {
           trackView(isMuted ? '/click/mute/off' : '/click/mute/on', '음소거 토글');
           vndrCall(NDR.MUTE);
-          // iOS gesture chain: mute/unmute 직접 호출 + 멈춰있으면 playVideo 재시도
           try {
+            // gesture chain에서 직접 처리
             if (isMuted) {
               ytPlayer.current?.unMute();
-              if (ytPlayer.current?.getPlayerState?.() !== 1 && !pausedRef.current) {
+              ytPlayer.current?.setVolume(100);
+              // 재생 중이 아니면 kick-start
+              if (ytPlayer.current?.getPlayerState?.() !== 1 && !paused) {
                 ytPlayer.current?.playVideo();
               }
             } else {
@@ -380,7 +378,11 @@ const Player = forwardRef<PlayerHandle, Props>(function Player({
         }}>
           {isMuted ? <Mute size={22} strokeWidth={1.75} /> : <Volume size={22} strokeWidth={1.75} />}
         </RailButton>
-        <RailButton onClick={() => { trackView('/click/bottomsheet/open', '회차목록 열기'); vndrCall(NDR.EPISODE_LIST); onOpenBottomSheet(); }}>
+        <RailButton onClick={() => {
+          trackView('/click/bottomsheet/open', '회차목록 열기');
+          vndrCall(NDR.EPISODE_LIST);
+          onOpenBottomSheet();
+        }}>
           <List size={22} strokeWidth={1.75} />
         </RailButton>
       </div>

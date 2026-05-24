@@ -26,8 +26,7 @@ export default function Feed({ seriesId, epIdx, onEpChange, onOpenBottomSheet, o
   const touchDelta = useRef<number>(0);
   const lastWheelTime = useRef<number>(0);
   const activeProgressRef = useRef<number>(0);
-  // gesture chain 안에서 다음/이전 Player의 playVideo()를 직접 호출하기 위한 핸들 맵
-  const playerHandlesRef = useRef<Record<string, PlayerHandle | null>>({});
+  const singlePlayerRef = useRef<PlayerHandle>(null);
 
   const series = getSeries(seriesId)!;
   const currentEntry = feed[epIdx];
@@ -101,12 +100,12 @@ export default function Feed({ seriesId, epIdx, onEpChange, onOpenBottomSheet, o
       trackView('/click/feed/swipe-next', '다음 화 스와이프');
       vndrCall(NDR.SWIPE_NEXT);
       // iOS gesture chain 안에서 직접 play() 호출 — useEffect 비동기 경로 우회
-      if (!isLastEp) playerHandlesRef.current[feed[epIdx + 1]?.id]?.play();
+      if (!isLastEp) singlePlayerRef.current?.play();
       tryGoNext();
     } else if (delta > 50 && epIdx > 0) {
       trackView('/click/feed/swipe-prev', '이전 화 스와이프');
       vndrCall(NDR.SWIPE_PREV);
-      playerHandlesRef.current[feed[epIdx - 1]?.id]?.play();
+      singlePlayerRef.current?.play();
       onEpChange(epIdx - 1);
     }
 
@@ -118,11 +117,11 @@ export default function Feed({ seriesId, epIdx, onEpChange, onOpenBottomSheet, o
     const now = Date.now();
     if (now - lastWheelTime.current < 800) return;
     if (e.deltaY > 30) {
-      if (!isLastEp) playerHandlesRef.current[feed[epIdx + 1]?.id]?.play();
+      if (!isLastEp) singlePlayerRef.current?.play();
       tryGoNext();
       lastWheelTime.current = now;
     } else if (e.deltaY < -30 && epIdx > 0) {
-      playerHandlesRef.current[feed[epIdx - 1]?.id]?.play();
+      singlePlayerRef.current?.play();
       onEpChange(epIdx - 1);
       lastWheelTime.current = now;
     }
@@ -152,42 +151,65 @@ export default function Feed({ seriesId, epIdx, onEpChange, onOpenBottomSheet, o
             flexDirection: 'column',
             transform: `translateY(-${epIdx * 100}%)`,
             transition: 'transform 400ms cubic-bezier(0.22, 1, 0.36, 1)',
+            position: 'relative',
           }}
         >
           {feed.map((entry, i) => {
-            const isNear = Math.abs(i - epIdx) <= 1;
+            const isNear = i >= epIdx - 1 && i <= epIdx + 2;
+            const videoMatch = entry.videoUrl?.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|shorts\/|watch\?v=|\?v=))([\w-]{11})/);
+            const videoId = videoMatch ? videoMatch[1] : null;
             return (
               <div
                 key={entry.id}
                 style={{ flex: '0 0 100%', width: '100%', height: '100%', position: 'relative' }}
               >
-                {isNear && (
-                  <Player
-                    ref={(handle) => { playerHandlesRef.current[entry.id] = handle; }}
-                    entry={entry}
-                    active={i === epIdx}
-                    isMuted={isMuted}
-                    onToggleMute={() => setIsMuted((p) => !p)}
-                    onOpenBottomSheet={onOpenBottomSheet}
-                    onProgressChange={(p) => {
-                      activeProgressRef.current = p;
-                      if (i === epIdx) setActiveProgress(p);
-                    }}
-                    onDurationChange={(d) => {
-                      if (i === epIdx) setActiveDuration(d);
-                    }}
-                    onEnded={() => {
-                      if (i === feed.length - 1) {
-                        onShowCompletion();
-                      } else {
-                        onEpChange(i + 1);
-                      }
-                    }}
-                  />
+                {/* 썸네일 배경 — 플레이어가 로딩 중이거나 다른 슬라이드일 때 표시됨 */}
+                {isNear && videoId && (
+                  <div style={{ position: 'absolute', inset: 0, background: '#000' }}>
+                    <img
+                      src={`https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`}
+                      alt=""
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }}
+                    />
+                  </div>
                 )}
               </div>
             );
           })}
+
+          {/* 단일 플레이어 오버레이 — 항상 현재 활성화된 슬라이드 위치에 렌더링됨 */}
+          <div
+            style={{
+              position: 'absolute',
+              top: `${epIdx * 100}%`,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              zIndex: 10,
+            }}
+          >
+            <Player
+              ref={singlePlayerRef}
+              entry={currentEntry}
+              isMuted={isMuted}
+              onToggleMute={() => setIsMuted((p) => !p)}
+              onOpenBottomSheet={onOpenBottomSheet}
+              onProgressChange={(p) => {
+                activeProgressRef.current = p;
+                setActiveProgress(p);
+              }}
+              onDurationChange={(d) => {
+                setActiveDuration(d);
+              }}
+              onEnded={() => {
+                if (isLastEp) {
+                  onShowCompletion();
+                } else {
+                  onEpChange(epIdx + 1);
+                }
+              }}
+            />
+          </div>
         </div>
       </div>
 
