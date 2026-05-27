@@ -5,6 +5,7 @@ import CompletionModal from './CompletionModal';
 import Main from './screens/Main';
 import { SERIES } from '@/lib/data';
 import { firePagePV } from '@/lib/ndr';
+import { trackView } from '@/lib/gtag';
 
 function pickRandomSeries(excludeId?: string): string {
   const available = SERIES.filter((s) => !s.isComingSoon && s.id !== excludeId);
@@ -25,6 +26,7 @@ function PlayerApp() {
     setSeriesId(found ? found.id : pickRandomSeries());
     setMounted(true);
     firePagePV();
+    trackView('/', '드라마판');
   }, []);
 
   const handleSelectSeries = (id: string) => {
