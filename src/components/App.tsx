@@ -26,7 +26,7 @@ function PlayerApp() {
     setSeriesId(found ? found.id : pickRandomSeries());
     setMounted(true);
     firePagePV();
-    trackView('/', '드라마판');
+    trackView('/dramapann', '드라마판');
   }, []);
 
   const handleSelectSeries = (id: string) => {
