@@ -182,8 +182,23 @@ export const SERIES: Series[] = [
   },
 ];
 
+// ─── API 데이터 주입 ─────────────────────────────────────────────────────────
+// App 초기화 시 fetchContents() 결과로 채워진다. null이면 하드코딩 SERIES 폴백.
+
+let _apiSeries: Series[] | null = null;
+
+/** API에서 받아온 Series 배열을 주입. App 마운트 시 1회 호출. */
+export function setSeriesData(series: Series[]): void {
+  _apiSeries = series;
+}
+
+/** 현재 사용 중인 Series 배열 (API > 하드코딩 순) */
+export function getAllSeries(): Series[] {
+  return _apiSeries ?? SERIES;
+}
+
 export function getSeries(id: string): Series | undefined {
-  return SERIES.find((s) => s.id === id);
+  return getAllSeries().find((s) => s.id === id);
 }
 
 export function getFeedFor(seriesId: string): FeedEntry[] {

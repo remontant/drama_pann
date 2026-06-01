@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { SERIES, getSeries } from '@/lib/data';
+import { getAllSeries, getSeries } from '@/lib/data';
 import { trackView } from '@/lib/gtag';
 import { vndrCall, NDR } from '@/lib/ndr';
 
@@ -119,7 +119,7 @@ export default function BottomSheet({
     videoUrl: i < availableCount ? series.episodes[i].videoUrl : undefined,
   }));
 
-  const otherSeries = SERIES.filter((s) => s.id !== seriesId);
+  const otherSeries = getAllSeries().filter((s) => s.id !== seriesId);
 
   const handleEpClick = (ep: { available: boolean; idx: number }) => {
     if (!ep.available) {
