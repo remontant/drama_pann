@@ -24,6 +24,16 @@
     <meta name="twitter:description" content="스와이프 한 번으로 다음 화로! '죽을 수 없는 밤', '러브라이트' 등 인기 숏폼 드라마를 지금 무료로 감상해보세요. 1분 만에 바뀌는 판도, 미친 몰입의 세로형 드라마 콘텐츠." />
     <meta name="twitter:image" content="https://shortform.nate.com/dramapann/assets/og.png" />
 
+    <!-- 로그인 팝업 콜백 — React 로드 전 즉시 처리 -->
+    <script>
+      (function () {
+        if (new URLSearchParams(location.search).get('drama_login') === '1') {
+          localStorage.setItem('drama_pann_login_at', Date.now().toString());
+          window.close();
+        }
+      })();
+    </script>
+
     <!-- Google Analytics -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-ENBSV07N1Y"></script>
     <script>
