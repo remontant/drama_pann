@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
-import { List, Mute, Volume } from '@/components/Icons';
+import { List, Mute, Volume, Heart } from '@/components/Icons';
 import { FeedEntry, getSeries } from '@/lib/data';
 import { trackView } from '@/lib/gtag';
 import { vndrCall, NDR } from '@/lib/ndr';
+import { fetchLikes, toggleLike } from '@/lib/api';
 
 let _ytApiCallbacks: (() => void)[] = [];
 
@@ -89,6 +90,43 @@ const Player = forwardRef<PlayerHandle, Props>(function Player({
   const [paused, setPaused] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [isError, setIsError] = useState(false);
+
+  // ── 좋아요 ──────────────────────────────────────────────────────────────────
+  const [likeCount, setLikeCount] = useState(0);
+  const [liked, setLiked] = useState(false);
+  const [likeLoading, setLikeLoading] = useState(false);
+
+  // 회차 바뀔 때마다 좋아요 카운트 + 본인 여부 fetch
+  useEffect(() => {
+    if (!entry.ep || !entry.seriesId) return;
+    setLiked(false);
+    setLikeCount(0);
+    fetchLikes(entry.seriesId, entry.ep)
+      .then(({ count, liked: l }) => { setLikeCount(count); setLiked(l); })
+      .catch(() => {});
+  }, [entry.seriesId, entry.ep]);
+
+  const handleLike = async () => {
+    if (likeLoading || !entry.ep) return;
+    // 낙관적 업데이트 — 즉시 UI 반영 후 서버 결과로 보정
+    const wasLiked = liked;
+    setLiked(!wasLiked);
+    setLikeCount((c) => c + (wasLiked ? -1 : 1));
+    setLikeLoading(true);
+    try {
+      const result = await toggleLike(entry.seriesId, entry.ep);
+      setLikeCount(result.count);
+      setLiked(result.liked);
+      trackView('/click/heart', '좋아요 토글');
+      vndrCall(NDR.HEART);
+    } catch {
+      // 실패 시 롤백
+      setLiked(wasLiked);
+      setLikeCount((c) => c + (wasLiked ? 1 : -1));
+    } finally {
+      setLikeLoading(false);
+    }
+  };
 
   const ytPlayer = useRef<any>(null);
   const ytReadyRef = useRef(false);
@@ -353,6 +391,34 @@ const Player = forwardRef<PlayerHandle, Props>(function Player({
           display: 'flex', flexDirection: 'column', gap: 20, alignItems: 'center',
         }}
       >
+        {/* 좋아요 버튼 */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+          <RailButton onClick={handleLike}>
+            <Heart
+              size={22}
+              strokeWidth={1.75}
+              style={{
+                color: liked ? '#ff4d6d' : 'var(--ink)',
+                fill: liked ? '#ff4d6d' : 'none',
+                transition: 'color 150ms, fill 150ms',
+                transform: likeLoading ? 'scale(0.85)' : 'scale(1)',
+              }}
+            />
+          </RailButton>
+          {likeCount > 0 && (
+            <span style={{
+              fontSize: 11,
+              fontWeight: 600,
+              color: liked ? '#ff4d6d' : 'rgba(255,255,255,0.7)',
+              letterSpacing: '-0.3px',
+              lineHeight: 1,
+              transition: 'color 150ms',
+            }}>
+              {likeCount >= 1000 ? `${(likeCount / 1000).toFixed(1)}k` : likeCount}
+            </span>
+          )}
+        </div>
+
         <RailButton onClick={() => {
           trackView(isMuted ? '/click/mute/off' : '/click/mute/on', '음소거 토글');
           vndrCall(NDR.MUTE);
