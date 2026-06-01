@@ -2,12 +2,6 @@ export const LOGIN_SUCCESS_MESSAGE_TYPE = 'DRAMA_PANN_LOGIN_SUCCESS' as const;
 export const LOGIN_ACK_PARAM = 'drama_login' as const;
 export const LOGIN_ACK_VALUE = '1' as const;
 
-export function appendLoginAckParam(url: string): string {
-  const u = new URL(url);
-  u.searchParams.set(LOGIN_ACK_PARAM, LOGIN_ACK_VALUE);
-  return u.toString();
-}
-
 const W = 480, H = 800;
 
 function popupFeatures(): string {
@@ -17,8 +11,10 @@ function popupFeatures(): string {
 }
 
 export function openLoginPopup(currentUrl: string = window.location.href): void {
-  const callbackUrl = appendLoginAckParam(currentUrl);
-  const loginUrl = `https://xo.nate.com/mnate/Login.sk?redirect=${encodeURIComponent(callbackUrl)}`;
+  const callbackUrl = new URL(currentUrl);
+  callbackUrl.searchParams.set(LOGIN_ACK_PARAM, LOGIN_ACK_VALUE);
+
+  const loginUrl = `https://xo.nate.com/mnate/Login.sk?redirect=${encodeURIComponent(callbackUrl.toString())}`;
 
   const popup = window.open(loginUrl, 'dramaPannLogin', popupFeatures());
   if (!popup) {
@@ -27,19 +23,24 @@ export function openLoginPopup(currentUrl: string = window.location.href): void 
   }
   popup.focus();
 
-  const onMessage = (e: MessageEvent) => {
-    if (e.origin !== window.location.origin) return;
-    if (e.data?.type !== LOGIN_SUCCESS_MESSAGE_TYPE) return;
-    window.removeEventListener('message', onMessage);
-    clearInterval(closePoll);
-    window.dispatchEvent(new CustomEvent('drama-login-complete'));
-  };
-  window.addEventListener('message', onMessage);
-
-  const closePoll = window.setInterval(() => {
+  // 부모가 400ms마다 팝업 URL을 확인해서 직접 닫음
+  // - 팝업이 xo.nate.com(크로스오리진)이면 popup.location 접근 시 에러 → 로그인 중
+  // - 팝업이 shortform.nate.com(동일오리진)으로 돌아오면 URL에 ?drama_login=1 감지 가능
+  // - 부모가 popup.close() 호출 → window.opener/COOP 문제 없음
+  const poll = window.setInterval(() => {
     if (popup.closed) {
-      clearInterval(closePoll);
-      window.removeEventListener('message', onMessage);
+      clearInterval(poll);
+      return;
+    }
+    try {
+      const params = new URLSearchParams(popup.location.search);
+      if (params.get(LOGIN_ACK_PARAM) === LOGIN_ACK_VALUE) {
+        clearInterval(poll);
+        popup.close();
+        window.dispatchEvent(new CustomEvent('drama-login-complete'));
+      }
+    } catch {
+      // 팝업이 크로스오리진(xo.nate.com)이면 접근 불가 — 정상, 계속 대기
     }
   }, 400);
 }
