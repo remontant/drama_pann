@@ -98,17 +98,45 @@ const Player = forwardRef<PlayerHandle, Props>(function Player({
     fetchMe().then((me) => setIsLogin(me.isLogin)).catch(() => setIsLogin(false));
   }, []);
 
+  const loginPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   const openLoginWindow = () => {
     const callbackUrl = window.location.href;
     const w = 480, h = 600;
     const left = Math.round(window.screenX + (window.outerWidth - w) / 2);
     const top = Math.round(window.screenY + (window.outerHeight - h) / 2);
-    window.open(
+    const popup = window.open(
       `https://xo.nate.com/mnate/Login.sk?redirect=${encodeURIComponent(callbackUrl)}`,
       'nateLogin',
       `width=${w},height=${h},left=${left},top=${top},scrollbars=yes,resizable=yes`,
     );
+
+    // 로그인 완료 감지 — 1.5초마다 fetchMe() 폴링
+    if (loginPollRef.current) clearInterval(loginPollRef.current);
+    loginPollRef.current = setInterval(async () => {
+      try {
+        if (popup?.closed) {
+          clearInterval(loginPollRef.current!);
+          loginPollRef.current = null;
+          return;
+        }
+        const me = await fetchMe();
+        if (me.isLogin) {
+          setIsLogin(true);
+          popup?.close();
+          clearInterval(loginPollRef.current!);
+          loginPollRef.current = null;
+        }
+      } catch {}
+    }, 1500);
+
+    // 5분 후 자동 중단
+    setTimeout(() => {
+      if (loginPollRef.current) { clearInterval(loginPollRef.current); loginPollRef.current = null; }
+    }, 5 * 60 * 1000);
   };
+
+  useEffect(() => () => { if (loginPollRef.current) clearInterval(loginPollRef.current); }, []);
 
   // ── 좋아요 ──────────────────────────────────────────────────────────────────
   const [likeCount, setLikeCount] = useState(0);
