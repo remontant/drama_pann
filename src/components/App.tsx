@@ -7,7 +7,7 @@ import { getAllSeries, setSeriesData, Series } from '@/lib/data';
 import { firePagePV } from '@/lib/ndr';
 import { trackView } from '@/lib/gtag';
 import { fetchContents, fetchContent } from '@/lib/api';
-import { LOGIN_ACK_PARAM, LOGIN_STORAGE_KEY } from '@/lib/loginPopup';
+import { LOGIN_ACK_PARAM, LOGIN_BROADCAST_CHANNEL } from '@/lib/loginPopup';
 
 function pickRandomSeries(excludeId?: string): string {
   const available = getAllSeries().filter((s) => !s.isComingSoon && s.id !== excludeId);
@@ -138,9 +138,11 @@ export default function App() {
 
   // 로그인 팝업 콜백 처리 — 팝업 창에서 ?drama_login=1 감지
   if (params.get(LOGIN_ACK_PARAM) === '1') {
-    localStorage.setItem(LOGIN_STORAGE_KEY, Date.now().toString());
-    window.close(); // 팝업 닫기 시도
-    return null;   // 팝업이 안 닫히는 경우 빈 화면 유지
+    const bc = new BroadcastChannel(LOGIN_BROADCAST_CHANNEL);
+    bc.postMessage({ type: 'login_complete' });
+    bc.close();
+    window.close();
+    return null;
   }
 
   return <PlayerApp />;
