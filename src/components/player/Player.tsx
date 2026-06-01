@@ -4,6 +4,7 @@ import { FeedEntry, getSeries } from '@/lib/data';
 import { trackView } from '@/lib/gtag';
 import { vndrCall, NDR } from '@/lib/ndr';
 import { fetchLikes, toggleLike, fetchMe } from '@/lib/api';
+import { openLoginPopup } from '@/lib/loginPopup';
 
 let _ytApiCallbacks: (() => void)[] = [];
 
@@ -92,51 +93,20 @@ const Player = forwardRef<PlayerHandle, Props>(function Player({
   const [isError, setIsError] = useState(false);
 
   // ── 로그인 상태 ──────────────────────────────────────────────────────────────
-  const [isLogin, setIsLogin] = useState<boolean | null>(null); // null = 아직 모름
+  const [isLogin, setIsLogin] = useState<boolean | null>(null);
 
   useEffect(() => {
     fetchMe().then((me) => setIsLogin(me.isLogin)).catch(() => setIsLogin(false));
   }, []);
 
-  const loginPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const openLoginWindow = () => {
-    const callbackUrl = window.location.href;
-    const w = 480, h = 600;
-    const left = Math.round(window.screenX + (window.outerWidth - w) / 2);
-    const top = Math.round(window.screenY + (window.outerHeight - h) / 2);
-    const popup = window.open(
-      `https://xo.nate.com/mnate/Login.sk?redirect=${encodeURIComponent(callbackUrl)}`,
-      'nateLogin',
-      `width=${w},height=${h},left=${left},top=${top},scrollbars=yes,resizable=yes`,
-    );
-
-    // 로그인 완료 감지 — 1.5초마다 fetchMe() 폴링
-    if (loginPollRef.current) clearInterval(loginPollRef.current);
-    loginPollRef.current = setInterval(async () => {
-      try {
-        if (popup?.closed) {
-          clearInterval(loginPollRef.current!);
-          loginPollRef.current = null;
-          return;
-        }
-        const me = await fetchMe();
-        if (me.isLogin) {
-          setIsLogin(true);
-          popup?.close();
-          clearInterval(loginPollRef.current!);
-          loginPollRef.current = null;
-        }
-      } catch {}
-    }, 1500);
-
-    // 5분 후 자동 중단
-    setTimeout(() => {
-      if (loginPollRef.current) { clearInterval(loginPollRef.current); loginPollRef.current = null; }
-    }, 5 * 60 * 1000);
-  };
-
-  useEffect(() => () => { if (loginPollRef.current) clearInterval(loginPollRef.current); }, []);
+  // 로그인 팝업 완료 시 'drama-login-complete' 이벤트 수신 → isLogin 갱신
+  useEffect(() => {
+    const handler = () => {
+      fetchMe().then((me) => setIsLogin(me.isLogin)).catch(() => {});
+    };
+    window.addEventListener('drama-login-complete', handler);
+    return () => window.removeEventListener('drama-login-complete', handler);
+  }, []);
 
   // ── 좋아요 ──────────────────────────────────────────────────────────────────
   const [likeCount, setLikeCount] = useState(0);
@@ -157,7 +127,7 @@ const Player = forwardRef<PlayerHandle, Props>(function Player({
     if (likeLoading || !entry.ep) return;
     // 비로그인이면 토스트 표시
     if (isLogin === false) {
-      openLoginWindow();
+      openLoginPopup();
       return;
     }
     // 낙관적 업데이트 — 즉시 UI 반영 후 서버 결과로 보정
