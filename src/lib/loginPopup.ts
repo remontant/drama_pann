@@ -29,18 +29,22 @@ export function openLoginPopup(currentUrl: string = window.location.href): void 
   // - 부모가 popup.close() 호출 → window.opener/COOP 문제 없음
   const poll = window.setInterval(() => {
     if (popup.closed) {
+      console.log('[login] popup closed');
       clearInterval(poll);
       return;
     }
     try {
+      const href = popup.location.href;
+      console.log('[login] popup url:', href);
       const params = new URLSearchParams(popup.location.search);
       if (params.get(LOGIN_ACK_PARAM) === LOGIN_ACK_VALUE) {
+        console.log('[login] detected! closing popup');
         clearInterval(poll);
         popup.close();
         window.dispatchEvent(new CustomEvent('drama-login-complete'));
       }
-    } catch {
-      // 팝업이 크로스오리진(xo.nate.com)이면 접근 불가 — 정상, 계속 대기
+    } catch (e: any) {
+      console.log('[login] cross-origin (still on login page):', e?.message);
     }
   }, 400);
 }
