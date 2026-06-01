@@ -7,7 +7,6 @@ import { getAllSeries, setSeriesData, Series } from '@/lib/data';
 import { firePagePV } from '@/lib/ndr';
 import { trackView } from '@/lib/gtag';
 import { fetchContents, fetchContent } from '@/lib/api';
-import LoginPopupAckBridge from './LoginPopupAckBridge';
 
 function pickRandomSeries(excludeId?: string): string {
   const available = getAllSeries().filter((s) => !s.isComingSoon && s.id !== excludeId);
@@ -135,10 +134,5 @@ function PlayerApp() {
 export default function App() {
   const params = new URLSearchParams(window.location.search);
   if (params.get('page') === 'main' || window.location.hash === '#main') return <Main />;
-  return (
-    <>
-      <LoginPopupAckBridge />
-      <PlayerApp />
-    </>
-  );
+  return <PlayerApp />;
 }
