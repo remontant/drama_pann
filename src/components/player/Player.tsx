@@ -100,9 +100,13 @@ const Player = forwardRef<PlayerHandle, Props>(function Player({
 
   const openLoginWindow = () => {
     const callbackUrl = window.location.href;
+    const w = 480, h = 600;
+    const left = Math.round(window.screenX + (window.outerWidth - w) / 2);
+    const top = Math.round(window.screenY + (window.outerHeight - h) / 2);
     window.open(
       `https://xo.nate.com/mnate/Login.sk?redirect=${encodeURIComponent(callbackUrl)}`,
-      '_blank',
+      'nateLogin',
+      `width=${w},height=${h},left=${left},top=${top},scrollbars=yes,resizable=yes`,
     );
   };
 
