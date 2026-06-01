@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>로그인 중...</title></head>
+<body>
+<script>
+(function () {
+  var opener = window.opener;
+  if (opener && !opener.closed) {
+    try {
+      opener.postMessage({ type: 'DRAMA_PANN_LOGIN_SUCCESS' }, window.location.origin);
+    } catch (e) {}
+    window.close();
+  } else {
+    // 팝업 차단으로 일반 탭에서 열린 경우 → 드라마판으로 이동
+    window.location.replace('/dramapann/');
+  }
+})();
+</script>
+</body>
+</html>

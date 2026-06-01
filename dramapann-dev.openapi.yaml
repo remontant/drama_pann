@@ -1,0 +1,943 @@
+openapi: 3.0.3
+info:
+  title: drama-pann backend
+  version: 1.0.0
+  description: |
+    drama-pann 콘텐츠/회차/댓글/좋아요 백엔드.
+
+    ## 경로 prefix
+    - 공개 API : `/service/api/dramapann/*`
+    - 어드민   : `/service/admin/api/dramapann/*` (정적 페이지는 `/service/admin/dramapann/`)
+    - Nginx 가 `/service/*` 만 노드로 전달한다.
+
+    ## 인증
+    - SFN 쿠키 → 사내 세션서버 `http://192.168.192.246/session/userinfo` 호출 → 정상 응답이면 AES 복호화 후 `cmn` 추출.
+    - 댓글/좋아요 작성·수정·삭제는 로그인 필수, 어드민 라우트는 화이트리스트 cmn 만 통과.
+
+    ## cmn / IP 정책
+    - **DB·어드민**: 평문 cmn 그대로 저장·표시.
+    - **공개 API 응답**: 평문 cmn / IP 절대 노출 X. 사용자 식별은 서버가 계산한 boolean (`isMine`, `reported`) 으로만 전달. 삭제·수정·신고는 댓글 id + 쿠키(SFN) 기반 서버 검증이라 식별자 노출 불필요.
+    - **IP**: 댓글 작성 시 작성자 IP 저장. **어드민 응답에서만** 노출.
+
+    ## HTTP 메소드
+    GET / POST 만 사용. 수정·삭제는 URL 동사 (`/update`, `/delete`) 패턴.
+
+    ## 댓글 생애주기 정책
+    한 댓글 row 가 어떻게 만들어지고, 가려지고, 사라지는지 한눈에 정리.
+
+    ### 작성 (사용자)
+    - 로그인 + 비차단 + 분당 10회 이내 + **같은 본문 10분 내 재작성 금지** + 금칙어 필터 통과 → 통과 시 `comments` 에 평문 cmn, 요청 IP 와 함께 1건 INSERT.
+    - 차단된 사용자는 403 `blocked`, 금칙어 매칭 시 400 `filtered_keyword`, 동일 본문 재작성은 429 `duplicate_body`, 분당 한도 초과는 429 `rate_limited`.
+
+    ### 수정 (사용자, 본인 댓글만)
+    - 본문만 교체 (1~1024자), `updated_at` 갱신. 금칙어 필터가 다시 적용된다.
+    - 닉네임은 `users` 단위로 따로 관리 — 댓글에 박혀있지 않고 응답 시 JOIN 되므로, 닉을 바꾸면 과거 댓글까지 새 닉으로 보인다.
+
+    ### 삭제 (사용자, 본인 댓글만)
+    - `comments` row 자체를 DELETE — 복구 불가. 좋아요는 별개 테이블이라 영향 없음.
+    - 해당 댓글에 달려있던 신고(`reports`) row 는 그대로 남는다 (FK·CASCADE 없음). 어드민 신고 목록에서 해당 항목은 `comment: null` 로 표시된다.
+
+    ### 신고 (다른 사용자, 로그인 + 비차단 필수)
+    - 분당 5회 제한, 본인 댓글 신고 불가 (400 `self_report`), 같은 신고자가 같은 댓글을 두 번 신고 불가 (400 `duplicate`, `UNIQUE(comment_id, reporter_cmn)`).
+    - 신고는 `reports` 에 `status='pending'` 으로 INSERT → 어드민 대시보드 신고 목록에 노출.
+    - **신고 즉시 신고자 본인에게는 댓글 본문이 가려진다.** 응답에 `reported: true` 가 오고 `body` 는 빈 문자열로 내려간다. 프론트는 placeholder ("신고하신 댓글입니다") 로 표시. 다른 사용자에게는 변화 없음 (어드민 처리 전까지 그대로 노출).
+    - 신고 버튼은 비활성화된다.
+
+    ### 댓글 마스킹 (`reportHidden`)
+    `hidden` 과 별개의 가림 상태. 정책상 두 가지 시점에 본문이 공란으로 응답된다 (row 는 유지, nickname/시각 등은 그대로).
+    - **신고자 본인 시점**: `reported=true` 이면 즉시 `body=''`. (`reportHidden` 은 false 일 수 있음 — 어드민 처리 전 단계)
+    - **모두에게 공개되는 시점**: 어드민이 신고를 `status=resolved` (action 미지정) 로 처리하면 `comments.report_hidden=1` 이 세팅되어 모든 사용자 응답에 `reportHidden=true` + `body=''` 로 내려간다.
+    - 어드민이 명시적으로 `action=hide` 를 지정하면 마스킹이 아니라 **완전 가림** (`hidden=1`, 응답에서 row 자체 제외) 으로 작동. `action=delete` 는 영구 삭제.
+    - `status=dismissed` 는 마스킹을 트리거하지 않는다 (= 신고가 부당했다는 판단).
+    - 마스킹 해제는 어드민 `/comments/:id/update` 에 `reportHidden=false` 를 보내 수동으로 풀 수 있다.
+
+    ### 어드민: 숨김 / 숨김 해제 (`/comments/:id/hide`, `/unhide`)
+    - `hidden = 1/0` 토글. **데이터는 남는다.** 공개 응답(`GET /episodes/.../comments`) 에서 `hidden=1` 은 제외되고, 어드민 응답에는 그대로 보인다.
+    - 가벼운 가림 — 잘못 가렸으면 unhide 로 즉시 복구 가능.
+
+    ### 어드민: 댓글 수정 (`/comments/:id/update`)
+    - `body`, `hidden` 둘 다 선택. 둘 다 지정하면 한 번에 갱신. (작성자 동의 없이 본문도 바꿀 수 있는 운영 권한)
+
+    ### 어드민: 댓글 완전 삭제 (`/comments/:id/delete`)
+    - row DELETE — 복구 불가. 사용자 자가삭제와 동일하게 `reports` row 는 orphan 으로 남는다.
+
+    ### 어드민: 신고 처리 (`/reports/:id/resolve`)
+    - `status`: `resolved` | `dismissed` — pending 에서 빠진다. 처리한 어드민 cmn / 시각 / 메모가 `reports` 에 기록.
+    - `action` 옵션으로 신고 처리와 함께 댓글 후속조치:
+      - 생략 + `status=resolved` → **댓글 마스킹** (`report_hidden=1`, 모두에게 body 공란 응답) — 신고 승인의 기본 동작
+      - 생략 + `status=dismissed` → 댓글에 아무 변화 없음
+      - `hide` → 해당 댓글 `hidden=1` (완전 가림, 응답에서 row 제외)
+      - `delete` → 해당 댓글 row DELETE (영구)
+    - **한 댓글에 신고가 여러 건이면 각각 따로 처리해야 한다** — 1건 resolve 한다고 다른 pending 이 자동으로 닫히지 않는다. 다만 첫 resolve 에서 이미 마스킹되었으므로 추가 resolve 의 마스킹은 멱등하다. `action=delete` 로 댓글이 사라지면 다른 신고들은 orphan 상태로 pending 에 남는다 (필요하면 dismissed 처리 권장).
+
+    ### 어드민: 사용자 차단 (`/blocked-cmns`)
+    - 차단된 cmn 은 **댓글 작성·수정·신고·좋아요 토글 모두 거부** (403 `blocked`). 이미 작성한 과거 댓글은 자동으로 숨겨지지 않는다 — 필요하면 어드민이 별도로 hide.
+    - 차단 해제 시 다시 작성 가능.
+
+    ### 어드민: 금칙어 (`/filtered-keywords`)
+    - 부분 일치, 대소문자 무시. 댓글 작성·수정 시 본문에 포함되면 400 `filtered_keyword` 로 거부. **과거에 이미 작성된 댓글은 소급 적용되지 않는다.**
+servers:
+  - url: /
+tags:
+  - { name: public-me,        description: 세션 상태·닉네임 }
+  - { name: public-contents,  description: 콘텐츠·회차 조회 }
+  - { name: public-comments,  description: 댓글 조회·작성·수정·삭제 }
+  - { name: public-likes,     description: 회차별 좋아요 카운트·토글 }
+  - { name: admin-contents,   description: 콘텐츠 CRUD (어드민) }
+  - { name: admin-episodes,   description: 회차 CRUD (어드민) }
+  - { name: admin-comments,   description: 댓글 관리 (어드민) }
+  - { name: admin-cmns,       description: 어드민 cmn 화이트리스트 (어드민) }
+  - { name: admin-reports,    description: 댓글 신고 처리 (어드민) }
+  - { name: admin-moderation, description: 사용자 차단 / 금칙어 관리 (어드민) }
+  - { name: admin-stats,      description: 대시보드 통계 (어드민) }
+  - { name: admin-debug,      description: 세션 파싱 / 평문 cmn 확인 (어드민 전용) }
+
+paths:
+  /service/api/dramapann/me:
+    get:
+      tags: [public-me]
+      summary: 현재 세션 상태
+      description: |
+        SFN 쿠키 → 세션서버 검증 후 결과. 미로그인이면 `{isLogin:false}` 단독.
+        로그인이면 `nickname` 도 포함 (users 테이블의 현재 닉).
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Me' }
+
+  /service/api/dramapann/me/nickname:
+    post:
+      tags: [public-me]
+      summary: 닉네임 변경
+      description: |
+        본인 닉네임만 변경. 1~15자, 공백 trim. **전역 UNIQUE** — 다른 사용자가
+        쓰는 닉으로 변경 시 409. 본인의 현재 닉과 같으면 200 + `noop:true`.
+        변경되면 기존에 작성한 모든 댓글의 응답 nickname 도 자동으로 새 닉으로 보인다 (users JOIN).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nickname]
+              properties:
+                nickname:
+                  type: string
+                  minLength: 1
+                  maxLength: 15
+                  description: 새 닉네임 (1~15자)
+                  example: "내닉네임"
+      responses:
+        '200':
+          description: 변경 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  isLogin:  { type: boolean, example: true }
+                  nickname: { type: string,  example: "내닉네임" }
+                  noop:     { type: boolean, description: "본인이 현재 쓰는 닉과 동일해 변경이 일어나지 않은 경우 true", example: false }
+        '400': { description: 형식 오류 (길이/빈값) }
+        '401': { description: 로그인 필요 }
+        '409': { description: 닉네임 중복 }
+
+  /service/api/dramapann/contents:
+    get:
+      tags: [public-contents]
+      summary: 콘텐츠 목록
+      description: |
+        숨김(hidden=true) 제외, `sortOrder ASC, id ASC` 순. 회차 목록은 포함하지 않음
+        (상세 호출로 가져온다).
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/Content' }
+
+  /service/api/dramapann/contents/{id}:
+    get:
+      tags: [public-contents]
+      summary: 콘텐츠 상세 (회차 + 회차별 댓글/좋아요 수 포함)
+      description: |
+        각 회차 객체에 `commentCount`(공개 댓글 수, hidden 제외)·`likeCount`(좋아요 수)가 동봉된다.
+        영상 우측 댓글·좋아요 버튼의 숫자 배지를 콘텐츠 진입 시 1회 호출로 채울 수 있다.
+        본인 좋아요 여부(`liked`)는 사용자별이라 여기 없음 — 좋아요 토글 응답(`{liked, count}`)으로 갱신.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string }, description: 콘텐츠 id (slug) }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Content'
+                  - type: object
+                    properties:
+                      episodes:
+                        type: array
+                        items: { $ref: '#/components/schemas/EpisodeWithCounts' }
+        '404': { description: 콘텐츠 없음 (또는 숨김) }
+
+  /service/api/dramapann/episodes/{contentId}/{ep}/comments:
+    get:
+      tags: [public-comments]
+      summary: 회차 댓글 목록 (cursor pagination)
+      description: |
+        `id DESC` (최신부터). hidden=0 만 응답.
+        - 첫 호출: `?limit=20` → `{ items, nextCursor }`
+        - 다음 페이지: `?cursor=<nextCursor>&limit=20`
+        - 마지막 페이지에선 `nextCursor: null`
+      parameters:
+        - { name: contentId, in: path,  required: true, schema: { type: string },  description: 콘텐츠 id }
+        - { name: ep,        in: path,  required: true, schema: { type: integer }, description: 회차 번호 (1부터) }
+        - { name: cursor,    in: query, schema: { type: integer }, description: "이전 페이지 응답의 nextCursor 값. 생략하면 첫 페이지." }
+        - { name: limit,     in: query, schema: { type: integer, default: 20, maximum: 100 }, description: 페이지 크기 (기본 20, 최대 100) }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CommentList' }
+              examples:
+                sample:
+                  summary: 정상 + 본인 신고 + 어드민 마스킹 섞인 경우
+                  value:
+                    items:
+                      - { id: 12, contentId: method, ep: 1, nickname: "상냥한고양이402", body: "1화 진짜 미쳤다 뒤로 갈수록 몰입감 폭발", hidden: false, reportHidden: false, isMine: false, reported: false, createdAt: "2026-06-01 09:42:11", updatedAt: "2026-06-01 09:42:11" }
+                      - { id: 11, contentId: method, ep: 1, nickname: "유쾌한판다517",   body: "",                                          hidden: false, reportHidden: false, isMine: false, reported: true,  createdAt: "2026-06-01 09:31:08", updatedAt: "2026-06-01 09:35:22" }
+                      - { id: 9,  contentId: method, ep: 1, nickname: "차분한코알라108", body: "",                                          hidden: false, reportHidden: true,  isMine: false, reported: false, createdAt: "2026-06-01 08:55:43", updatedAt: "2026-06-01 08:55:43" }
+                    nextCursor: 9
+
+    post:
+      tags: [public-comments]
+      summary: 댓글 작성 (로그인 필수)
+      description: |
+        본문은 1~1024자. nickname 은 별도로 받지 않는다 (users 테이블의 현재 닉을 사용).
+
+        통과 조건 (모두 만족해야 작성됨):
+        - 로그인 (`401 login required`)
+        - 차단 사용자 아님 (`403 blocked`)
+        - 분당 10회 이내 (`429 rate_limited`)
+        - 같은 본문을 10분 내 재작성 안 함 (`429 duplicate_body` — 도배 방지)
+        - 본문에 금칙어 없음 (`400 filtered_keyword`)
+
+        작성 시 작성자 IP 가 함께 저장된다 (어드민 응답에서만 노출).
+      parameters:
+        - { name: contentId, in: path, required: true, schema: { type: string } }
+        - { name: ep,        in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body:
+                  type: string
+                  minLength: 1
+                  maxLength: 1024
+                  description: 댓글 본문
+                  example: "1화 진짜 미쳤다"
+      responses:
+        '201':
+          description: 작성됨
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Comment' }
+        '400': { description: body 형식 오류 }
+        '401': { description: 로그인 필요 }
+        '404': { description: 회차 없음 }
+
+  /service/api/dramapann/comments/{id}/update:
+    post:
+      tags: [public-comments]
+      summary: 댓글 수정 (작성자만)
+      description: |
+        본인이 작성한 댓글의 본문만 수정 (1~1024자). nickname 은 users 단위로 관리되므로 여기서 변경 불가.
+
+        - 본인 댓글이 아니면 403 forbidden. 작성자 ↔ 요청자 매칭은 서버 세션의 cmn 으로 검증한다.
+        - 금칙어 필터가 다시 적용됨 (`400 filtered_keyword`).
+        - 차단된 사용자는 수정도 불가 (`403 blocked`).
+        - `updated_at` 이 갱신된다.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer }, description: 댓글 id }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string, minLength: 1, maxLength: 1024, example: "수정한 댓글" }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Comment' } } } }
+        '400': { description: body 형식 오류 }
+        '401': { description: 로그인 필요 }
+        '403': { description: 본인 댓글 아님 }
+        '404': { description: 댓글 없음 }
+
+  /service/api/dramapann/comments/{id}/report:
+    post:
+      tags: [public-comments]
+      summary: 댓글 신고 (로그인 필수, 분당 5회)
+      description: |
+        부적절한 댓글을 신고한다. 신고는 `reports` 테이블에 `status='pending'` 으로 INSERT 되어
+        어드민 신고 목록(`/admin/reports`)에 노출된다.
+
+        제약:
+        - 본인 댓글 신고 불가 → `400 self_report`
+        - 같은 신고자가 같은 댓글을 두 번 신고 불가 → `400 duplicate` (UNIQUE 인덱스)
+        - 차단된 사용자는 신고 불가 → `403 blocked`
+        - 신고자당 분당 5회 초과 → `429 rate_limited`
+
+        **신고 즉시 신고자 본인 응답에서 본문이 가려진다** — 같은 댓글 응답에 `reported: true` + `body: ""` 가 내려가고
+        프론트는 placeholder ("신고하신 댓글입니다") 로 표시. 다른 사용자에게는 영향 없음.
+
+        다른 사용자 응답까지 가려지려면 어드민이 신고를 `status=resolved` 로 처리해야 한다 (기본 동작이 마스킹).
+        `action=hide` 는 완전 가림, `action=delete` 는 영구 삭제로 동작.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string, maxLength: 200, description: "신고 사유 (선택)", example: "욕설" }
+      responses:
+        '201': { description: 신고됨 }
+        '400': { description: "duplicate / self_report / 형식 오류" }
+        '401': { description: 로그인 필요 }
+        '403': { description: "차단된 사용자" }
+        '404': { description: 댓글 없음 }
+        '429': { description: rate limit 초과 }
+
+  /service/api/dramapann/comments/{id}/delete:
+    post:
+      tags: [public-comments]
+      summary: 댓글 삭제 (작성자만)
+      description: |
+        본인이 작성한 댓글을 영구 삭제. `comments` row 자체가 DELETE 되며 복구 불가.
+
+        부가 효과:
+        - 좋아요는 별개 테이블이라 영향 없음.
+        - 이 댓글에 달려있던 신고(`reports`) 는 그대로 남는다 (CASCADE 없음).
+          어드민 신고 목록에서 해당 항목은 `comment: null` 로 보인다 — 어드민이 dismissed 등으로 정리 가능.
+        - 차단 여부는 검사하지 않는다 — 차단된 사용자도 본인이 쓴 글은 지울 수 있다.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { ok: { type: boolean, example: true } } } } } }
+        '401': { description: 로그인 필요 }
+        '403': { description: 본인 댓글 아님 }
+        '404': { description: 댓글 없음 }
+
+  /service/api/dramapann/episodes/{contentId}/{ep}/likes:
+    get:
+      tags: [public-likes]
+      summary: 좋아요 카운트 + 본인 여부
+      description: |
+        `count` — 회차 전체 좋아요 수. `liked` — 요청자(로그인 한정)가 이 회차에 좋아요를 눌렀는지.
+        비로그인 요청은 `liked: false`.
+      parameters:
+        - { name: contentId, in: path, required: true, schema: { type: string } }
+        - { name: ep,        in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count: { type: integer, description: 회차 좋아요 총 개수, example: 142 }
+                  liked: { type: boolean, description: 본인 좋아요 여부 (비로그인이면 false), example: true }
+    post:
+      tags: [public-likes]
+      summary: 좋아요 토글 (로그인 필수)
+      description: |
+        좋아요가 없으면 추가, 있으면 취소. 항상 토글 직후의 새 상태를 응답.
+        - 로그인 필수, 차단된 사용자는 403 blocked 로 거부.
+        - 같은 cmn 당 분당 60회 토글 제한 (429 rate_limited).
+      parameters:
+        - { name: contentId, in: path, required: true, schema: { type: string } }
+        - { name: ep,        in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: 토글 후 새 상태
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  liked: { type: boolean, description: 토글 직후 본인 좋아요 상태, example: false }
+                  count: { type: integer, description: 토글 직후 전체 카운트, example: 141 }
+        '401': { description: 로그인 필요 }
+        '404': { description: 회차 없음 }
+
+  # ─────────── 어드민 ───────────
+  /service/admin/api/dramapann/contents:
+    get:
+      tags: [admin-contents]
+      summary: 콘텐츠 전체 목록 (숨김 포함)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Content' } }
+    post:
+      tags: [admin-contents]
+      summary: 콘텐츠 생성 (upsert, body.id 필수)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Content' }
+      responses:
+        '201': { description: 생성됨, content: { application/json: { schema: { $ref: '#/components/schemas/Content' } } } }
+        '400': { description: id/title 형식 오류 }
+
+  /service/admin/api/dramapann/contents/{id}:
+    get:
+      tags: [admin-contents]
+      summary: 콘텐츠 상세 (회차 포함, 숨김 무관)
+      parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+      responses:
+        '200': { description: OK }
+        '404': { description: not found }
+
+  /service/admin/api/dramapann/contents/{id}/update:
+    post:
+      tags: [admin-contents]
+      summary: 콘텐츠 수정 (upsert)
+      parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/Content' } } } }
+      responses: { '200': { description: OK }, '404': { description: not found } }
+
+  /service/admin/api/dramapann/contents/{id}/delete:
+    post:
+      tags: [admin-contents]
+      summary: 콘텐츠 삭제 (회차/댓글/좋아요도 CASCADE)
+      parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+      responses: { '200': { description: OK }, '404': { description: not found } }
+
+  /service/admin/api/dramapann/contents/{id}/episodes:
+    get:
+      tags: [admin-episodes]
+      summary: 회차 목록 (해당 콘텐츠)
+      parameters: [ { name: id, in: path, required: true, schema: { type: string } } ]
+      responses: { '200': { description: OK } }
+
+  /service/admin/api/dramapann/contents/{id}/episodes/{ep}:
+    post:
+      tags: [admin-episodes]
+      summary: 회차 등록/수정 (upsert)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: ep, in: path, required: true, schema: { type: integer } }
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/EpisodeInput' } } } }
+      responses: { '200': { description: OK } }
+
+  /service/admin/api/dramapann/contents/{id}/episodes/{ep}/delete:
+    post:
+      tags: [admin-episodes]
+      summary: 회차 삭제
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string } }
+        - { name: ep, in: path, required: true, schema: { type: integer } }
+      responses: { '200': { description: OK }, '404': { description: not found } }
+
+  /service/admin/api/dramapann/comments:
+    get:
+      tags: [admin-comments]
+      summary: 댓글 목록 (필터 + 페이지네이션, 숨김 포함)
+      description: 콘텐츠/회차로 필터 가능. 응답엔 `cmnHash` 도 포함 (사용자 그룹화용, 평문 cmn 은 미노출).
+      parameters:
+        - { name: contentId, in: query, schema: { type: string },  description: 콘텐츠 id (선택) }
+        - { name: ep,        in: query, schema: { type: integer }, description: 회차 번호 (contentId 와 같이 줘야 의미) }
+        - { name: limit,     in: query, schema: { type: integer, default: 50, maximum: 200 } }
+        - { name: offset,    in: query, schema: { type: integer, default: 0 } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: '#/components/schemas/AdminComment' }
+
+  /service/admin/api/dramapann/comments/{id}:
+    get:
+      tags: [admin-comments]
+      summary: 댓글 단건
+      parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ]
+      responses: { '200': { description: OK }, '404': { description: not found } }
+
+  /service/admin/api/dramapann/comments/{id}/update:
+    post:
+      tags: [admin-comments]
+      summary: 댓글 본문·숨김·마스킹 수정 (어드민 권한)
+      description: |
+        어드민 권한으로 본문 / 숨김(`hidden`) / 마스킹(`reportHidden`) 중 보낸 필드만 갱신.
+        작성자 동의 없이 본문도 바꿀 수 있는 운영용 라우트. 항상 `updated_at` 이 갱신된다.
+        금칙어 필터는 적용되지 않는다 (어드민이 직접 다듬는 용도라 가정).
+        `reportHidden=false` 로 보내면 신고 승인으로 자동 마스킹된 댓글을 다시 풀 수 있다.
+      parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                body:         { type: string,  description: 새 본문 (선택) }
+                hidden:       { type: boolean, description: "숨김 여부 변경 (선택). true 면 공개 응답에서 row 제외." }
+                reportHidden: { type: boolean, description: "마스킹 토글 (선택). true 면 공개 응답에서 body 공란. 신고 자동 마스킹 해제용." }
+      responses: { '200': { description: OK } }
+
+  /service/admin/api/dramapann/comments/{id}/hide:
+    post:
+      tags: [admin-comments]
+      summary: 댓글 숨김 처리 (공개 응답에서 제외)
+      description: |
+        `comments.hidden = 1` 로 토글. **데이터는 유지**되고, 공개 API(`GET /episodes/.../comments`) 응답에서만 제외된다.
+        어드민 응답에는 여전히 보이며, `/unhide` 로 즉시 복구 가능. 잘못 신고된 댓글에 대한 가벼운 가림용.
+      parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ]
+      responses: { '200': { description: OK } }
+
+  /service/admin/api/dramapann/comments/{id}/unhide:
+    post:
+      tags: [admin-comments]
+      summary: 숨김 해제
+      description: |
+        `comments.hidden = 0`. hide 와 마찬가지로 데이터 손실 없음 — 단순 플래그 토글.
+        삭제(`/delete`) 된 댓글은 row 자체가 없으므로 복구 불가 (404 not found).
+      parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ]
+      responses: { '200': { description: OK } }
+
+  /service/admin/api/dramapann/comments/{id}/delete:
+    post:
+      tags: [admin-comments]
+      summary: 댓글 완전 삭제
+      description: |
+        `comments` row 자체를 DELETE — **복구 불가.** 일시 가림용으로는 `/hide` 를 우선 고려.
+
+        부가 효과:
+        - 사용자 자가삭제와 동일하게, 이 댓글에 달려있던 신고(`reports`) row 는 그대로 남는다.
+          어드민 신고 목록에서 해당 항목은 `comment: null` 로 표시된다 (필요하면 dismissed 처리).
+        - 좋아요는 별개 테이블이라 영향 없음.
+      parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ]
+      responses: { '200': { description: OK } }
+
+  /service/admin/api/dramapann/admin-cmns:
+    get:
+      tags: [admin-cmns]
+      summary: 어드민 cmn 화이트리스트 (builtin 포함)
+      description: 코드 상수의 builtin cmn 도 가장 위에 함께 노출 (`builtin:true`).
+      responses: { '200': { description: OK } }
+    post:
+      tags: [admin-cmns]
+      summary: 어드민 cmn 추가
+      description: 평문 cmn 을 받아 hash 만 DB 에 저장. 정상 응답엔 평문 cmn 미포함.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [cmn]
+              properties:
+                cmn:  { type: string, description: "추가할 사용자의 평문 cmn", example: "12345678901" }
+                note: { type: string, description: "메모 (선택)", example: "운영팀 김OO" }
+      responses:
+        '201': { description: 추가됨 }
+        '400': { description: 중복 또는 builtin }
+
+  /service/admin/api/dramapann/admin-cmns/{cmnHash}/delete:
+    post:
+      tags: [admin-cmns]
+      summary: 어드민 cmn 삭제 (builtin 은 차단)
+      parameters:
+        - { name: cmnHash, in: path, required: true, schema: { type: string }, description: 어드민 목록 응답의 cmnHash 값 }
+      responses:
+        '200': { description: OK }
+        '400': { description: builtin cmn 은 삭제 불가 }
+        '404': { description: not found }
+
+  /service/admin/api/dramapann/reports:
+    get:
+      tags: [admin-reports]
+      summary: 신고 목록
+      description: |
+        신고 row 를 댓글과 LEFT JOIN 해서 반환. 댓글이 이미 삭제된 신고는 `comment: null` 로 표시.
+        응답에는 현재 status 의 목록 + 전체 `countPending` (배지용) 이 함께 포함된다.
+        기본 status 는 `pending` — 처리 대기 중인 것만 본다.
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [pending, resolved, dismissed, all], default: pending } }
+        - { name: limit,  in: query, schema: { type: integer, default: 50, maximum: 200 } }
+        - { name: offset, in: query, schema: { type: integer, default: 0 } }
+      responses: { '200': { description: OK } }
+
+  /service/admin/api/dramapann/reports/{id}/resolve:
+    post:
+      tags: [admin-reports]
+      summary: 신고 처리 + 후속 조치 옵션
+      description: |
+        신고 1건을 종결 처리한다. 처리한 어드민 cmn / 시각 / 메모가 `reports` 에 기록된다.
+
+        `status` 동작:
+        - `resolved` — 신고가 정당해 처리 완료. **action 미지정 시 댓글이 자동으로 마스킹된다** (`report_hidden=1` → 모두에게 body 공란 응답).
+        - `dismissed` — 신고가 부당. 댓글에 아무 변화 없음 (마스킹 트리거 X).
+
+        `action` 으로 댓글 후속조치를 명시 지정 (선택):
+        - `hide`   → 해당 댓글 `hidden=1` (응답에서 row 자체 제외 — 마스킹보다 강한 처리, 복구 가능)
+        - `delete` → 해당 댓글 row DELETE (영구)
+        - 생략     → status 에 따라: resolved=마스킹 / dismissed=무변화
+
+        주의:
+        - **한 댓글에 여러 신고가 있으면 각각 따로 resolve 해야 한다.** 1건 처리한다고 다른 pending 이 자동으로 닫히지 않는다.
+          (마스킹은 멱등하므로 추가 resolve 가 댓글 상태를 망가뜨리진 않음.)
+        - `action=delete` 로 댓글이 사라져도 같은 댓글의 다른 신고들은 pending 상태로 남는다 — 필요하면 dismissed 로 정리.
+        - 이미 처리된 신고(`resolved`/`dismissed`)도 다시 resolve 호출하면 status·메모·처리자가 덮어쓰여진다.
+        - 마스킹을 풀려면 어드민 `POST /comments/:id/update` 에 `reportHidden=false` 를 보낸다.
+      parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { type: string, enum: [resolved, dismissed], description: "처리 결과 (기본 resolved)", example: "resolved" }
+                action: { type: string, enum: [hide, delete], nullable: true, description: "댓글 후속 조치 (선택). hide 는 복구 가능, delete 는 영구." }
+                note:   { type: string, maxLength: 200, description: "처리 메모 (감사 로그용)" }
+      responses:
+        '200': { description: OK }
+        '404': { description: not found }
+
+  /service/admin/api/dramapann/blocked-cmns:
+    get:
+      tags: [admin-moderation]
+      summary: 차단 사용자 목록
+      description: "차단된 cmn 목록 (`blocked_cmns` 전체, 평문 cmn 노출 — 어드민 응답이라 허용)."
+      responses: { '200': { description: OK } }
+    post:
+      tags: [admin-moderation]
+      summary: 사용자 차단 (평문 cmn)
+      description: |
+        차단 즉시 effective. 이후 해당 cmn 의 댓글 작성·수정·신고·좋아요 토글이 모두 `403 blocked` 로 거부된다.
+        **과거에 작성된 댓글은 자동으로 숨겨지지 않는다** — 필요하면 어드민이 별도로 `/comments/:id/hide` 호출.
+        차단 정보(`blocked_cmns`) 는 캐시 5초 TTL — 추가 직후 잠시 지연될 수 있다.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [cmn]
+              properties:
+                cmn:    { type: string, description: "차단할 평문 cmn (어드민 응답·DB 모두 평문 저장)", example: "12345678901" }
+                reason: { type: string, maxLength: 200, description: "차단 사유 (감사 로그용)", example: "욕설 반복" }
+      responses:
+        '201': { description: 차단됨 }
+        '400': { description: "duplicate / cmn 미제공" }
+
+  /service/admin/api/dramapann/blocked-cmns/{cmn}/delete:
+    post:
+      tags: [admin-moderation]
+      summary: 차단 해제
+      description: "차단 row 삭제 — 즉시 다시 댓글·좋아요 가능. (캐시 TTL 만큼 짧은 지연 가능)"
+      parameters: [ { name: cmn, in: path, required: true, schema: { type: string }, description: "차단 목록에서 가져온 평문 cmn" } ]
+      responses: { '200': { description: OK }, '404': { description: not found } }
+
+  /service/admin/api/dramapann/filtered-keywords:
+    get:
+      tags: [admin-moderation]
+      summary: 금칙어 목록
+      responses: { '200': { description: OK } }
+    post:
+      tags: [admin-moderation]
+      summary: 금칙어 추가 (대소문자 무시, 부분 일치)
+      description: |
+        등록한 키워드가 댓글 본문에 부분 문자열로 포함되어 있으면 작성·수정이 `400 filtered_keyword` 로 거부된다.
+        대소문자 무시. 캐시 10초 TTL.
+        **과거에 이미 작성된 댓글에는 소급 적용되지 않는다** — 이미 올라간 글은 필요하면 어드민이 hide/delete.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [keyword]
+              properties:
+                keyword: { type: string, minLength: 1, maxLength: 100, description: "댓글 본문에 부분 포함되면 작성 거부" }
+      responses:
+        '201': { description: 추가됨 }
+        '400': { description: "duplicate / 형식 오류" }
+
+  /service/admin/api/dramapann/filtered-keywords/{keyword}/delete:
+    post:
+      tags: [admin-moderation]
+      summary: 금칙어 삭제
+      description: "이후 신규 댓글에선 해당 키워드가 더 이상 차단되지 않는다 (캐시 TTL 만큼 짧은 지연 가능)."
+      parameters: [ { name: keyword, in: path, required: true, schema: { type: string } } ]
+      responses: { '200': { description: OK }, '404': { description: not found } }
+
+  /service/admin/api/dramapann/stats:
+    get:
+      tags: [admin-stats]
+      summary: 대시보드 통계 (콘텐츠/회차/댓글/좋아요/사용자/신고/운영/TOP5)
+      responses: { '200': { description: OK } }
+
+  /service/admin/api/dramapann/debug/session:
+    get:
+      tags: [admin-debug]
+      summary: 세션 파싱 흐름 디버그 (cmn 마스킹)
+      description: |
+        본인 SFN 쿠키로 호출. 응답에 SFN raw, 세션서버 응답 cipher/JSON, 복호화 결과(평문 cmn 은 마스킹) 가 포함.
+        어드민 인증 필요.
+      responses:
+        '200': { description: OK }
+        '401': { description: 로그인 필요 }
+        '403': { description: 어드민 권한 없음 }
+
+  /service/admin/api/dramapann/debug/cmn:
+    get:
+      tags: [admin-debug]
+      summary: 어드민 본인 평문 cmn 확인 (테스트용)
+      description: |
+        매 요청 세션서버를 직접 호출해 일회성으로 평문 cmn 을 추출 후 응답한다.
+        메모리·캐시에는 저장하지 않는다. 본인 SFN 으로만 본인 cmn 만 볼 수 있다.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  isLogin: { type: boolean, example: true }
+                  cmn:     { type: string,  nullable: true, description: 평문 cmn (테스트용 노출), example: "10024232213" }
+                  cmnHash: { type: string,  nullable: true, description: HMAC 해시 (DB 비교용) }
+                  source:  { type: string,  enum: [cipher, plain-json], nullable: true }
+                  reason:  { type: string,  nullable: true, description: 비로그인일 때 원인 (no SFN cookie 등) }
+        '401': { description: 로그인 필요 }
+        '403': { description: 어드민 권한 없음 }
+
+components:
+  schemas:
+    Me:
+      type: object
+      description: 현재 세션 상태
+      properties:
+        isLogin:
+          type: boolean
+          description: 로그인 여부. SFN 쿠키 검증 + 세션서버가 cipher 응답을 정상 복호화하면 true.
+          example: true
+        nickname:
+          type: string
+          nullable: true
+          description: |
+            사용자 닉네임. 첫 로그인 시 자동 생성 (형용사 + 명사 + 100~999, 예: `상냥한고양이402`)
+            되어 users 테이블에 영구 저장. 비로그인이면 null.
+            `POST /me/nickname` 으로 변경 가능 (1~15자, UNIQUE).
+          example: "상냥한고양이402"
+
+    Content:
+      type: object
+      description: 콘텐츠(드라마/시리즈) 메타
+      properties:
+        id:
+          type: string
+          description: 콘텐츠 식별자 (slug, a-z0-9+dash, ≤63자). URL 에 그대로 사용.
+          example: "method"
+        title:
+          type: string
+          description: 콘텐츠 제목
+          example: "메소드"
+        tagline:
+          type: string
+          description: 부제 (한 줄 카피, 비어있을 수 있음)
+          example: ""
+        synopsis:
+          type: string
+          description: 줄거리
+          example: ""
+        poster:
+          type: string
+          description: 포스터 이미지 상대경로. 클라이언트가 base URL (예 `/dramapann/`) 을 prefix 로 붙여 표시.
+          example: "assets/posters/method.png"
+        genre:
+          type: string
+          description: 장르 라벨
+          example: "복수, 회귀"
+        season:
+          type: integer
+          description: 시즌 번호 (현재 1 고정)
+          example: 1
+        totalEp:
+          type: integer
+          description: 전체 회차 수 (예정 포함). 실제 등록된 episodes 보다 클 수 있다 (예 6화 등록, totalEp=15 → 9화 추가 예정).
+          example: 15
+        sortOrder:
+          type: integer
+          description: |
+            콘텐츠 목록 표시 순서 (오름차순). 작은 값이 앞. 시드는 10단위 간격(10,20,30...) 으로 박혀 있어
+            중간에 새 콘텐츠를 끼울 때 15 같은 값으로 넣을 수 있다.
+          example: 60
+        hidden:
+          type: boolean
+          description: 숨김 여부. true 면 공개 `/contents` 응답에서 제외 (어드민 응답엔 포함).
+          example: false
+        createdAt:
+          type: string
+          description: "생성 시각 (UTC, YYYY-MM-DD HH:MM:SS)"
+          example: "2026-05-29 07:18:48"
+        updatedAt:
+          type: string
+          description: "마지막 수정 시각 (UTC)"
+          example: "2026-06-01 09:42:11"
+
+    Episode:
+      type: object
+      description: 회차 정보
+      properties:
+        contentId: { type: string,  description: 상위 콘텐츠 id, example: "method" }
+        ep:        { type: integer, description: 회차 번호 (1부터), example: 1 }
+        title:     { type: string,  description: "회차 제목 (예 \"1화\", \"3화 (3-1)\")", example: "1화" }
+        duration:
+          type: integer
+          description: |
+            영상 길이 (초). drama-pann 클라이언트가 회차 정보 표시·다음 회차 자동 전환 타이머 등에 사용.
+            seed 는 모두 90 (1분 30초, 일반 숏폼 길이) 으로 박혀있음.
+          example: 90
+        videoUrl:
+          type: string
+          description: 영상 URL (YouTube/Shorts). 클라이언트가 iframe 으로 재생.
+          example: "https://youtu.be/H-QduAYVKiE"
+        createdAt: { type: string, description: "생성 시각 (UTC)", example: "2026-05-29 07:18:48" }
+        updatedAt: { type: string, description: "마지막 수정 시각 (UTC)", example: "2026-05-29 07:18:48" }
+
+    EpisodeWithCounts:
+      type: object
+      description: |
+        회차 정보 + 회차별 카운트. `GET /contents/:id` 의 episodes 항목에 사용.
+        Episode 의 모든 필드 + commentCount·likeCount.
+      properties:
+        contentId: { type: string,  example: "method" }
+        ep:        { type: integer, example: 1 }
+        title:     { type: string,  example: "1화" }
+        duration:  { type: integer, example: 90 }
+        videoUrl:  { type: string,  example: "https://youtu.be/H-QduAYVKiE" }
+        commentCount:
+          type: integer
+          description: "공개 댓글 수 (hidden 제외 — 공개 목록 GET .../comments 와 동일 기준)"
+          example: 42
+        likeCount:
+          type: integer
+          description: "좋아요 수"
+          example: 128
+        createdAt: { type: string, example: "2026-05-29 07:18:48" }
+        updatedAt: { type: string, example: "2026-05-29 07:18:48" }
+
+    EpisodeInput:
+      type: object
+      description: 회차 upsert 요청 본문 (어드민)
+      properties:
+        title:    { type: string,  description: 회차 제목, example: "1화" }
+        duration: { type: integer, description: 영상 길이 (초), example: 90 }
+        videoUrl: { type: string,  description: 영상 URL, example: "https://youtu.be/H-QduAYVKiE" }
+
+    Comment:
+      type: object
+      description: |
+        회차 댓글 (공개 응답용). 평문 cmn 과 IP 는 응답에 절대 노출되지 않는다.
+        사용자 식별·신고 상태는 서버가 계산한 boolean 플래그(`isMine`, `reported`, `reportHidden`)로만 전달.
+
+        본문 마스킹 정책: `reported=true` (신고자 본인 시점) 또는 `reportHidden=true` (어드민 승인 후) 면
+        `body` 는 빈 문자열로 응답된다. 프론트는 플래그를 보고 placeholder ("신고하신 댓글" / "신고된 댓글") 를 표시.
+      properties:
+        id:
+          type: integer
+          description: 댓글 PK (자동 증가). 정렬은 id DESC. cursor 로도 사용.
+          example: 12
+        contentId: { type: string,  description: 콘텐츠 id, example: "method" }
+        ep:        { type: integer, description: 회차 번호, example: 1 }
+        nickname:
+          type: string
+          description: 작성자 닉네임 — users 테이블 JOIN. 닉 변경 시 모든 응답에 즉시 반영. 마스킹돼도 nickname 은 유지된다.
+          example: "상냥한고양이402"
+        body:
+          type: string
+          description: |
+            댓글 본문 (최대 1024자). `reported=true` 또는 `reportHidden=true` 이면 빈 문자열로 응답된다.
+          example: "1화 진짜 미쳤다"
+        hidden:
+          type: boolean
+          description: |
+            어드민 완전 가림 여부. 공개 응답엔 `hidden=0` 만 노출되므로 사실상 항상 false 로 내려간다 (필드는 호환성용).
+          example: false
+        reportHidden:
+          type: boolean
+          description: |
+            어드민이 신고를 `resolved` 처리(action 미지정) 해 모두에게 마스킹된 상태. true 면 `body=""` 응답.
+            프론트는 "신고된 댓글입니다" placeholder 표시.
+          example: false
+        isMine:    { type: boolean, description: "요청자 본인이 작성한 댓글인지 (수정·삭제 버튼 표시용). 비로그인 false", example: false }
+        reported:
+          type: boolean
+          description: |
+            요청자가 이미 신고한 댓글인지. true 면 신고 버튼 비활성 + `body=""` 로 응답돼
+            프론트가 "신고하신 댓글입니다" placeholder 를 보인다. 비로그인 요청에선 항상 false.
+          example: false
+        createdAt: { type: string,  description: "작성 시각 (UTC)",         example: "2026-06-01 09:42:11" }
+        updatedAt: { type: string,  description: "마지막 수정 시각 (UTC)", example: "2026-06-01 09:42:11" }
+
+    CommentList:
+      type: object
+      description: 댓글 목록 + cursor 페이지네이션
+      properties:
+        items:
+          type: array
+          description: 댓글 배열 (id DESC, 최신부터)
+          items: { $ref: '#/components/schemas/Comment' }
+        nextCursor:
+          type: integer
+          nullable: true
+          description: |
+            다음 페이지 호출용. `?cursor=<이 값>&limit=20` 으로 다음 페이지 요청.
+            더 이상 없으면 null.
+          example: 9
+
+    AdminComment:
+      type: object
+      description: 어드민용 댓글 — 평문 cmn / IP / 원문 body 모두 노출 (어드민 응답에서만). 마스킹·숨김 상태도 그대로 본다.
+      properties:
+        id:           { type: integer, description: "댓글 PK",      example: 12 }
+        contentId:    { type: string,  description: "콘텐츠 id",    example: "method" }
+        ep:           { type: integer, description: "회차 번호",    example: 1 }
+        cmn:          { type: string,  description: "작성자 cmn (평문)", example: "99999999999" }
+        ip:           { type: string,  description: "작성 시점 클라이언트 IP (X-Forwarded-For 신뢰)", example: "10.18.141.52" }
+        nickname:     { type: string,  description: "작성자 닉네임 (users JOIN)",                example: "상냥한고양이402" }
+        body:         { type: string,  description: "댓글 원문 본문 (마스킹·숨김과 무관하게 어드민은 항상 본다)", example: "댓글 본문" }
+        hidden:       { type: boolean, description: "완전 가림 여부 (공개 응답에서 row 제외)", example: false }
+        reportHidden: { type: boolean, description: "신고 마스킹 여부 (공개 응답에서 body 공란). 신고가 resolved 처리되면 자동 1.", example: false }
+        createdAt:    { type: string,  description: "작성 시각 (UTC)",                            example: "2026-06-01 09:42:11" }
+        updatedAt:    { type: string,  description: "마지막 수정 시각 (UTC)",                    example: "2026-06-01 09:42:11" }

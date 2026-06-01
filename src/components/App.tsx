@@ -3,7 +3,6 @@ import Feed from './screens/Feed';
 import BottomSheet from './BottomSheet';
 import CompletionModal from './CompletionModal';
 import Main from './screens/Main';
-import LoginPopupAckBridge from './LoginPopupAckBridge';
 import { getAllSeries, setSeriesData, Series } from '@/lib/data';
 import { firePagePV } from '@/lib/ndr';
 import { trackView } from '@/lib/gtag';
@@ -135,10 +134,5 @@ function PlayerApp() {
 export default function App() {
   const params = new URLSearchParams(window.location.search);
   if (params.get('page') === 'main' || window.location.hash === '#main') return <Main />;
-  return (
-    <>
-      <LoginPopupAckBridge />
-      <PlayerApp />
-    </>
-  );
+  return <PlayerApp />;
 }
