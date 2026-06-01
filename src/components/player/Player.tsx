@@ -3,7 +3,7 @@ import { List, Mute, Volume, Heart } from '@/components/Icons';
 import { FeedEntry, getSeries } from '@/lib/data';
 import { trackView } from '@/lib/gtag';
 import { vndrCall, NDR } from '@/lib/ndr';
-import { fetchLikes, toggleLike } from '@/lib/api';
+import { fetchLikes, toggleLike, fetchMe } from '@/lib/api';
 
 let _ytApiCallbacks: (() => void)[] = [];
 
@@ -91,6 +91,23 @@ const Player = forwardRef<PlayerHandle, Props>(function Player({
   const [isReady, setIsReady] = useState(false);
   const [isError, setIsError] = useState(false);
 
+  // ── 로그인 상태 ──────────────────────────────────────────────────────────────
+  const [isLogin, setIsLogin] = useState<boolean | null>(null); // null = 아직 모름
+  const [loginToast, setLoginToast] = useState(false);
+  const loginToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    fetchMe().then((me) => setIsLogin(me.isLogin)).catch(() => setIsLogin(false));
+  }, []);
+
+  const showLoginToast = () => {
+    if (loginToastTimerRef.current) clearTimeout(loginToastTimerRef.current);
+    setLoginToast(true);
+    loginToastTimerRef.current = setTimeout(() => setLoginToast(false), 2500);
+  };
+
+  useEffect(() => () => { if (loginToastTimerRef.current) clearTimeout(loginToastTimerRef.current); }, []);
+
   // ── 좋아요 ──────────────────────────────────────────────────────────────────
   const [likeCount, setLikeCount] = useState(0);
   const [liked, setLiked] = useState(false);
@@ -108,6 +125,11 @@ const Player = forwardRef<PlayerHandle, Props>(function Player({
 
   const handleLike = async () => {
     if (likeLoading || !entry.ep) return;
+    // 비로그인이면 토스트 표시
+    if (isLogin === false) {
+      showLoginToast();
+      return;
+    }
     // 낙관적 업데이트 — 즉시 UI 반영 후 서버 결과로 보정
     const wasLiked = liked;
     setLiked(!wasLiked);
@@ -391,6 +413,20 @@ const Player = forwardRef<PlayerHandle, Props>(function Player({
           display: 'flex', flexDirection: 'column', gap: 20, alignItems: 'center',
         }}
       >
+        {/* 비로그인 토스트 */}
+        {loginToast && (
+          <div style={{
+            position: 'absolute', right: 60, bottom: 86,
+            background: 'rgba(0,0,0,0.8)', borderRadius: 8,
+            padding: '8px 12px', fontSize: 13, color: '#fff',
+            letterSpacing: '-0.3px', whiteSpace: 'nowrap',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+          }}>
+            네이트 로그인 후 이용하세요
+          </div>
+        )}
+
         {/* 좋아요 버튼 */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
           <RailButton onClick={handleLike}>
