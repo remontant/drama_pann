@@ -7,7 +7,7 @@ import { getAllSeries, setSeriesData, Series } from '@/lib/data';
 import { firePagePV } from '@/lib/ndr';
 import { trackView } from '@/lib/gtag';
 import { fetchContents, fetchContent } from '@/lib/api';
-import { LOGIN_ACK_PARAM, LOGIN_BROADCAST_CHANNEL } from '@/lib/loginPopup';
+import LoginPopupAckBridge from './LoginPopupAckBridge';
 
 function pickRandomSeries(excludeId?: string): string {
   const available = getAllSeries().filter((s) => !s.isComingSoon && s.id !== excludeId);
@@ -132,19 +132,13 @@ function PlayerApp() {
   );
 }
 
-function LoginCallback() {
-  useEffect(() => {
-    const bc = new BroadcastChannel(LOGIN_BROADCAST_CHANNEL);
-    bc.postMessage({ type: 'login_complete' });
-    // 메시지 전달 후 창 닫기 — 즉시 닫으면 메시지가 전달 전에 소멸될 수 있음
-    setTimeout(() => { bc.close(); window.close(); }, 300);
-  }, []);
-  return null;
-}
-
 export default function App() {
   const params = new URLSearchParams(window.location.search);
   if (params.get('page') === 'main' || window.location.hash === '#main') return <Main />;
-  if (params.get(LOGIN_ACK_PARAM) === '1') return <LoginCallback />;
-  return <PlayerApp />;
+  return (
+    <>
+      <LoginPopupAckBridge />
+      <PlayerApp />
+    </>
+  );
 }
