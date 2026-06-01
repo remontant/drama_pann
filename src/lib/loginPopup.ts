@@ -1,6 +1,5 @@
-export const LOGIN_SUCCESS_MESSAGE_TYPE = 'DRAMA_PANN_LOGIN_SUCCESS' as const;
+export const LOGIN_STORAGE_KEY = 'drama_pann_login_at' as const;
 export const LOGIN_ACK_PARAM = 'drama_login' as const;
-export const LOGIN_ACK_VALUE = '1' as const;
 
 const W = 480, H = 800;
 
@@ -12,8 +11,7 @@ function popupFeatures(): string {
 
 export function openLoginPopup(currentUrl: string = window.location.href): void {
   const callbackUrl = new URL(currentUrl);
-  callbackUrl.searchParams.set(LOGIN_ACK_PARAM, LOGIN_ACK_VALUE);
-
+  callbackUrl.searchParams.set(LOGIN_ACK_PARAM, '1');
   const loginUrl = `https://xo.nate.com/mnate/Login.sk?redirect=${encodeURIComponent(callbackUrl.toString())}`;
 
   const popup = window.open(loginUrl, 'dramaPannLogin', popupFeatures());
@@ -23,28 +21,15 @@ export function openLoginPopup(currentUrl: string = window.location.href): void 
   }
   popup.focus();
 
-  // 부모가 400ms마다 팝업 URL을 확인해서 직접 닫음
-  // - 팝업이 xo.nate.com(크로스오리진)이면 popup.location 접근 시 에러 → 로그인 중
-  // - 팝업이 shortform.nate.com(동일오리진)으로 돌아오면 URL에 ?drama_login=1 감지 가능
-  // - 부모가 popup.close() 호출 → window.opener/COOP 문제 없음
-  const poll = window.setInterval(() => {
-    if (popup.closed) {
-      console.log('[login] popup closed');
-      clearInterval(poll);
-      return;
-    }
-    try {
-      const href = popup.location.href;
-      console.log('[login] popup url:', href);
-      const params = new URLSearchParams(popup.location.search);
-      if (params.get(LOGIN_ACK_PARAM) === LOGIN_ACK_VALUE) {
-        console.log('[login] detected! closing popup');
-        clearInterval(poll);
-        popup.close();
-        window.dispatchEvent(new CustomEvent('drama-login-complete'));
-      }
-    } catch (e: any) {
-      console.log('[login] cross-origin (still on login page):', e?.message);
-    }
-  }, 400);
+  // COOP로 popup 참조가 끊기므로 popup.closed/location 모두 신뢰 불가.
+  // storage 이벤트는 COOP 영향 없이 동일 도메인 창 간 동작함.
+  const onStorage = (e: StorageEvent) => {
+    if (e.key !== LOGIN_STORAGE_KEY) return;
+    window.removeEventListener('storage', onStorage);
+    window.dispatchEvent(new CustomEvent('drama-login-complete'));
+  };
+  window.addEventListener('storage', onStorage);
+
+  // 10분 후 자동 정리
+  setTimeout(() => window.removeEventListener('storage', onStorage), 10 * 60 * 1000);
 }

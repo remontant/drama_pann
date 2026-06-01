@@ -7,6 +7,7 @@ import { getAllSeries, setSeriesData, Series } from '@/lib/data';
 import { firePagePV } from '@/lib/ndr';
 import { trackView } from '@/lib/gtag';
 import { fetchContents, fetchContent } from '@/lib/api';
+import { LOGIN_ACK_PARAM, LOGIN_STORAGE_KEY } from '@/lib/loginPopup';
 
 function pickRandomSeries(excludeId?: string): string {
   const available = getAllSeries().filter((s) => !s.isComingSoon && s.id !== excludeId);
@@ -134,5 +135,13 @@ function PlayerApp() {
 export default function App() {
   const params = new URLSearchParams(window.location.search);
   if (params.get('page') === 'main' || window.location.hash === '#main') return <Main />;
+
+  // 로그인 팝업 콜백: 팝업에서 ?drama_login=1 감지 시 localStorage로 부모에 신호
+  if (params.get(LOGIN_ACK_PARAM) === '1') {
+    localStorage.setItem(LOGIN_STORAGE_KEY, Date.now().toString());
+    window.close(); // script-closable이므로 시도 (COOP 무관)
+    return null;
+  }
+
   return <PlayerApp />;
 }
