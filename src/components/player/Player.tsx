@@ -99,15 +99,17 @@ const Player = forwardRef<PlayerHandle, Props>(function Player({
     fetchMe().then((me) => setIsLogin(me.isLogin)).catch(() => setIsLogin(false));
   }, []);
 
-  // 로그인 팝업 완료 시 자동으로 좋아요 처리
+  // ── 좋아요 ──────────────────────────────────────────────────────────────────
+  const [likeCount, setLikeCount] = useState(0);
+  const [liked, setLiked] = useState(false);
+  const [likeLoading, setLikeLoading] = useState(false);
+
   const entryRef = useRef(entry);
   const likedRef = useRef(liked);
   entryRef.current = entry;
+  likedRef.current = liked;
 
-  useEffect(() => {
-    likedRef.current = liked;
-  }, [liked]);
-
+  // 로그인 팝업 완료 시 자동으로 좋아요 처리
   useEffect(() => {
     const handler = async () => {
       const me = await fetchMe().catch(() => null);
@@ -127,11 +129,6 @@ const Player = forwardRef<PlayerHandle, Props>(function Player({
     window.addEventListener('drama-login-complete', handler);
     return () => window.removeEventListener('drama-login-complete', handler);
   }, []);
-
-  // ── 좋아요 ──────────────────────────────────────────────────────────────────
-  const [likeCount, setLikeCount] = useState(0);
-  const [liked, setLiked] = useState(false);
-  const [likeLoading, setLikeLoading] = useState(false);
 
   // 회차 바뀔 때마다 좋아요 카운트 + 본인 여부 fetch
   useEffect(() => {
