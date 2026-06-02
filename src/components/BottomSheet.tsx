@@ -446,7 +446,7 @@ export default function BottomSheet({
                       />
 
                       {/* 좋아요 수 — 우측 하단 */}
-                      {(s.totalLikes ?? 0) > 0 && (
+                      {s.totalLikes !== undefined && (
                         <div style={{
                           position: 'absolute', right: 6, bottom: 6,
                           display: 'flex', alignItems: 'center', gap: 3,
@@ -467,7 +467,7 @@ export default function BottomSheet({
                               ? `${((s.totalLikes ?? 0) / 10000).toFixed(1)}만`
                               : (s.totalLikes ?? 0) >= 1000
                               ? `${((s.totalLikes ?? 0) / 1000).toFixed(1)}k`
-                              : s.totalLikes}
+                              : (s.totalLikes ?? 0)}
                           </span>
                         </div>
                       )}
