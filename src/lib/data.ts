@@ -17,6 +17,7 @@ export interface Series {
   stills: string[];
   episodes: Episode[];
   isComingSoon?: boolean;
+  totalLikes?: number;
 }
 
 export interface FeedEntry {

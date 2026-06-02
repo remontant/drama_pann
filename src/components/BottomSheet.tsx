@@ -445,6 +445,33 @@ export default function BottomSheet({
                         }}
                       />
 
+                      {/* 좋아요 수 — 우측 하단 */}
+                      {(s.totalLikes ?? 0) > 0 && (
+                        <div style={{
+                          position: 'absolute', right: 6, bottom: 6,
+                          display: 'flex', alignItems: 'center', gap: 3,
+                          background: 'rgba(0,0,0,0.55)',
+                          borderRadius: 20,
+                          padding: '3px 7px 3px 5px',
+                          backdropFilter: 'blur(4px)',
+                          WebkitBackdropFilter: 'blur(4px)',
+                        }}>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="#ff4d6d">
+                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                          </svg>
+                          <span style={{
+                            fontSize: 10, fontWeight: 700, color: '#fff',
+                            letterSpacing: '-0.2px', lineHeight: 1,
+                          }}>
+                            {(s.totalLikes ?? 0) >= 10000
+                              ? `${((s.totalLikes ?? 0) / 10000).toFixed(1)}만`
+                              : (s.totalLikes ?? 0) >= 1000
+                              ? `${((s.totalLikes ?? 0) / 1000).toFixed(1)}k`
+                              : s.totalLikes}
+                          </span>
+                        </div>
+                      )}
+
                       {/* 현재 시청 중 오버레이 — 기획 미포함, 추후 사용
                       {isCurrent && (
                         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'rgba(0,0,0,0.55)' }}>

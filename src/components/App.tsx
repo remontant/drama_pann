@@ -28,6 +28,7 @@ function toSeries(detail: Awaited<ReturnType<typeof fetchContent>>): Series {
     totalEp: detail.totalEp,
     stills: [],
     isComingSoon: detail.hidden,
+    totalLikes: detail.episodes.reduce((sum, e) => sum + (e.likeCount ?? 0), 0),
     episodes: detail.episodes.map((e) => ({
       ep: e.ep,
       title: e.title,
