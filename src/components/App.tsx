@@ -50,8 +50,11 @@ function PlayerApp() {
       // API에서 콘텐츠 목록 + 상세(회차 포함) 로드
       try {
         const contents = await fetchContents();
-        const details = await Promise.all(contents.map((c) => fetchContent(c.id)));
-        setSeriesData(details.map(toSeries));
+        const results = await Promise.allSettled(contents.map((c) => fetchContent(c.id)));
+        const series = results
+          .filter((r): r is PromiseFulfilledResult<Awaited<ReturnType<typeof fetchContent>>> => r.status === 'fulfilled')
+          .map((r) => toSeries(r.value));
+        if (series.length > 0) setSeriesData(series);
       } catch (err) {
         console.warn('[App] API 로드 실패, 하드코딩 데이터 사용:', err);
       }
