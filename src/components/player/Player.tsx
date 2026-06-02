@@ -99,10 +99,30 @@ const Player = forwardRef<PlayerHandle, Props>(function Player({
     fetchMe().then((me) => setIsLogin(me.isLogin)).catch(() => setIsLogin(false));
   }, []);
 
-  // 로그인 팝업 완료 시 'drama-login-complete' 이벤트 수신 → isLogin 갱신
+  // 로그인 팝업 완료 시 자동으로 좋아요 처리
+  const entryRef = useRef(entry);
+  const likedRef = useRef(liked);
+  entryRef.current = entry;
+
   useEffect(() => {
-    const handler = () => {
-      fetchMe().then((me) => setIsLogin(me.isLogin)).catch(() => {});
+    likedRef.current = liked;
+  }, [liked]);
+
+  useEffect(() => {
+    const handler = async () => {
+      const me = await fetchMe().catch(() => null);
+      if (!me?.isLogin) return;
+      setIsLogin(true);
+      // 로그인 전에 누르려 했던 하트 자동 처리
+      const e = entryRef.current;
+      if (!e.ep || likedRef.current) return;
+      try {
+        const result = await toggleLike(e.seriesId, e.ep);
+        setLikeCount(result.count);
+        setLiked(result.liked);
+        trackView('/click/heart', '좋아요 토글');
+        vndrCall(NDR.HEART);
+      } catch {}
     };
     window.addEventListener('drama-login-complete', handler);
     return () => window.removeEventListener('drama-login-complete', handler);
