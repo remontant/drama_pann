@@ -10,4 +10,13 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    proxy: {
+      '/service': {
+        target: 'https://shortform.nate.com',
+        changeOrigin: true,
+        secure: true,
+      },
+    },
+  },
 });
