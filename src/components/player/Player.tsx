@@ -444,18 +444,18 @@ const Player = forwardRef<PlayerHandle, Props>(function Player({
               }}
             />
           </RailButton>
-          {likeCount > 0 && (
-            <span style={{
-              fontSize: 11,
-              fontWeight: 600,
-              color: liked ? '#ff4d6d' : 'rgba(255,255,255,0.7)',
-              letterSpacing: '-0.3px',
-              lineHeight: 1,
-              transition: 'color 150ms',
-            }}>
-              {likeCount >= 1000 ? `${(likeCount / 1000).toFixed(1)}k` : likeCount}
-            </span>
-          )}
+          <span style={{
+            fontSize: 11,
+            fontWeight: 600,
+            color: liked ? '#ff4d6d' : 'rgba(255,255,255,0.7)',
+            letterSpacing: '-0.3px',
+            lineHeight: 1,
+            transition: 'color 150ms',
+          }}>
+            {likeCount > 0
+              ? (likeCount >= 1000 ? `${(likeCount / 1000).toFixed(1)}k` : likeCount)
+              : '좋아요'}
+          </span>
         </div>
 
         <RailButton onClick={() => {
