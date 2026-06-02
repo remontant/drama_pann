@@ -124,7 +124,9 @@ const Player = forwardRef<PlayerHandle, Props>(function Player({
         setLiked(result.liked);
         trackView('/click/heart', '좋아요 토글');
         vndrCall(NDR.HEART);
-      } catch {}
+      } catch (err) {
+        console.warn('[Player] 로그인 후 자동 좋아요 실패:', err);
+      }
     };
     window.addEventListener('drama-login-complete', handler);
     return () => window.removeEventListener('drama-login-complete', handler);
