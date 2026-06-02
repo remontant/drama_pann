@@ -1,3 +1,5 @@
+import { fetchMe } from '@/lib/api';
+
 export const LOGIN_STORAGE_KEY = 'drama_pann_login_at' as const;
 export const LOGIN_ACK_PARAM = 'drama_login' as const;
 
@@ -21,15 +23,34 @@ export function openLoginPopup(currentUrl: string = window.location.href): void 
   }
   popup.focus();
 
-  // COOP로 popup 참조가 끊기므로 popup.closed/location 모두 신뢰 불가.
-  // storage 이벤트는 COOP 영향 없이 동일 도메인 창 간 동작함.
-  const onStorage = (e: StorageEvent) => {
-    if (e.key !== LOGIN_STORAGE_KEY) return;
+  let done = false;
+  const finish = () => {
+    if (done) return;
+    done = true;
+    clearInterval(poll);
     window.removeEventListener('storage', onStorage);
     window.dispatchEvent(new CustomEvent('drama-login-complete'));
   };
+
+  // ① localStorage storage 이벤트 — 데스크톱 / iOS 일반 모드
+  const onStorage = (e: StorageEvent) => {
+    if (e.key !== LOGIN_STORAGE_KEY) return;
+    finish();
+  };
   window.addEventListener('storage', onStorage);
 
-  // 10분 후 자동 정리
-  setTimeout(() => window.removeEventListener('storage', onStorage), 10 * 60 * 1000);
+  // ② fetchMe() 폴링 — iOS 개인정보 보호 탭 (localStorage 탭간 격리)
+  let count = 0;
+  const poll = setInterval(async () => {
+    count++;
+    if (count > 90) { // 최대 3분
+      clearInterval(poll);
+      window.removeEventListener('storage', onStorage);
+      return;
+    }
+    try {
+      const me = await fetchMe();
+      if (me.isLogin) finish();
+    } catch {}
+  }, 2000);
 }
