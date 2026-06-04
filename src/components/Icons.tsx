@@ -15,6 +15,7 @@ import {
   MoreVertical,
   Home,
   X,
+  MessageCircle,
 } from 'lucide-react';
 
 export {
@@ -34,4 +35,5 @@ export {
   MoreVertical as More,
   Home,
   X,
+  MessageCircle,
 };

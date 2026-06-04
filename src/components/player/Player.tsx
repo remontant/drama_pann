@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, forwardRef, useImperativeHandle } from 'react';
-import { List, Mute, Volume, Heart } from '@/components/Icons';
+import { List, Mute, Volume, Heart, MessageCircle } from '@/components/Icons';
 import { FeedEntry, getSeries } from '@/lib/data';
 import { trackView } from '@/lib/gtag';
 import { vndrCall, NDR } from '@/lib/ndr';
@@ -168,6 +168,34 @@ const Player = forwardRef<PlayerHandle, Props>(function Player({
       setLikeLoading(false);
     }
   };
+
+  // ── 댓글 ──────────────────────────────────────────────────────────────────
+  const [commentOpen, setCommentOpen] = useState(false);
+
+  const handleComment = () => {
+    if (!entry.ep) return;
+    if (isLogin === false) {
+      commentPendingRef.current = true;
+      openLoginPopup();
+      return;
+    }
+    setCommentOpen(true);
+  };
+
+  // 로그인 팝업 완료 후 댓글 창 열기 (로그인 전에 댓글 버튼을 눌렀던 경우)
+  const commentPendingRef = useRef(false);
+  useEffect(() => {
+    const handler = async () => {
+      if (!commentPendingRef.current) return;
+      commentPendingRef.current = false;
+      const me = await fetchMe().catch(() => null);
+      if (!me?.isLogin) return;
+      setIsLogin(true);
+      setCommentOpen(true);
+    };
+    window.addEventListener('drama-login-complete', handler);
+    return () => window.removeEventListener('drama-login-complete', handler);
+  }, []);
 
   const ytPlayer = useRef<any>(null);
   const ytReadyRef = useRef(false);
@@ -457,6 +485,22 @@ const Player = forwardRef<PlayerHandle, Props>(function Player({
             {likeCount > 0
               ? (likeCount >= 1000 ? `${(likeCount / 1000).toFixed(1)}k` : likeCount)
               : '좋아요'}
+          </span>
+        </div>
+
+        {/* 댓글 버튼 */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+          <RailButton onClick={handleComment}>
+            <MessageCircle size={22} strokeWidth={1.75} />
+          </RailButton>
+          <span style={{
+            fontSize: 11,
+            fontWeight: 600,
+            color: 'rgba(255,255,255,0.7)',
+            letterSpacing: '-0.3px',
+            lineHeight: 1,
+          }}>
+            댓글
           </span>
         </div>
 

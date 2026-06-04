@@ -15,7 +15,7 @@ export default defineConfig({
       '/service': {
         target: 'https://shortform.nate.com',
         changeOrigin: true,
-        secure: true,
+        secure: false,
       },
     },
   },
